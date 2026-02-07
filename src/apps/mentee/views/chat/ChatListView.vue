@@ -42,7 +42,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, nextTick, onMounted, onUnmounted } from 'vue'
 import { Loading } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useChatStore } from '@/stores/chatStore'
@@ -97,6 +97,11 @@ onMounted(async () => {
     // 5. 메시지 이력 로드
     const { data: msgs } = await getMessages(room.roomId, 0, 50)
     chatStore.setMessages([...msgs].reverse())
+
+    // 6. 메시지 로드 후 스크롤 하단으로 이동
+    nextTick(() => {
+      messageListRef.value?.scrollToBottom()
+    })
   } catch (err) {
     console.error('[Chat] 초기화 실패:', err)
     ElMessage.error('채팅방 연결에 실패했습니다.')

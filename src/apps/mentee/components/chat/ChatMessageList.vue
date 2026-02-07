@@ -103,12 +103,12 @@ function formatTime(dateStr) {
 
 function scrollToBottom() {
   nextTick(() => {
-    if (scrollbarRef.value) {
-      const wrapEl = scrollbarRef.value.wrapRef
-      if (wrapEl) {
-        wrapEl.scrollTop = wrapEl.scrollHeight
+    setTimeout(() => {
+      const wrap = scrollbarRef.value?.$el?.querySelector('.el-scrollbar__wrap')
+      if (wrap) {
+        wrap.scrollTop = wrap.scrollHeight
       }
-    }
+    }, 100)
   })
 }
 
@@ -116,6 +116,7 @@ function scrollToBottom() {
 watch(
   () => props.messages.length,
   () => scrollToBottom(),
+  { immediate: true },
 )
 
 defineExpose({ scrollToBottom })
