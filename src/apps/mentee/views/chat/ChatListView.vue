@@ -81,7 +81,7 @@ onMounted(async () => {
 
     const room = rooms[0]
     chatStore.currentRoom = room
-    mentorName.value = `멘토 (ID: ${room.mentorId})`
+    mentorName.value = room.mentorName || '멘토'
 
     // 2. WebSocket 연결
     await connect()

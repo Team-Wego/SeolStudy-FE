@@ -101,14 +101,19 @@ function formatTime(dateStr) {
   return d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
 }
 
+function doScroll() {
+  const wrap = scrollbarRef.value?.$el?.querySelector('.el-scrollbar__wrap')
+  if (wrap) {
+    wrap.scrollTop = wrap.scrollHeight
+  }
+}
+
 function scrollToBottom() {
   nextTick(() => {
-    setTimeout(() => {
-      const wrap = scrollbarRef.value?.$el?.querySelector('.el-scrollbar__wrap')
-      if (wrap) {
-        wrap.scrollTop = wrap.scrollHeight
-      }
-    }, 100)
+    // 즉시 스크롤
+    setTimeout(doScroll, 100)
+    // 이미지/미디어 로드 후 한번 더 스크롤
+    setTimeout(doScroll, 500)
   })
 }
 

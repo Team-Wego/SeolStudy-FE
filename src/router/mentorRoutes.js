@@ -14,6 +14,11 @@ export default {
       component: () => import('@/apps/mentor/views/DashboardView.vue'),
     },
     {
+      path: 'chat',
+      name: 'MentorChat',
+      component: () => import('@/apps/mentor/views/MentorChatView.vue'),
+    },
+    {
       path: 'mentees',
       name: 'MentorMenteeList',
       component: () => import('@/apps/mentor/views/MenteeListView.vue'),

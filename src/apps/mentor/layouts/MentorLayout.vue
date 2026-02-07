@@ -42,13 +42,14 @@
 
 <script setup>
 import { RouterView, RouterLink, useRoute, useRouter } from 'vue-router'
-import { LayoutDashboard, Users, LogOut } from 'lucide-vue-next'
+import { LayoutDashboard, Users, MessageSquare, LogOut } from 'lucide-vue-next'
 import { removeCookie } from '@/utils/cookie'
 
 const router = useRouter()
 
 const menus = [
   { name: 'dashboard', label: '대시보드', to: '/mentor/dashboard', icon: LayoutDashboard },
+  { name: 'chat', label: '채팅', to: '/mentor/chat', icon: MessageSquare },
   { name: 'mentee-list', label: '담당 멘티 목록', to: '/mentor/mentees', icon: Users },
 ]
 

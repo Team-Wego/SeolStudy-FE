@@ -1,5 +1,10 @@
 import api from '@/api/index.js'
 
+// 멘토 채팅방 목록 조회
+export const getMentorRooms = (mentorId) => {
+  return api.get(`/chat/rooms/mentor/${mentorId}`)
+}
+
 // 멘티 채팅방 목록 조회
 export const getMenteeRooms = (menteeId) => {
   return api.get(`/chat/rooms/mentee/${menteeId}`)
