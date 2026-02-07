@@ -20,6 +20,17 @@
           <span>{{ menu.label }}</span>
         </RouterLink>
       </nav>
+
+      <!-- 로그아웃 -->
+      <div class="px-4 py-4 border-t border-gray-200">
+        <button
+          @click="handleLogout"
+          class="flex items-center gap-3 px-5 py-3 w-full rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-100 transition-colors"
+        >
+          <LogOut :size="18" />
+          <span>로그아웃</span>
+        </button>
+      </div>
     </aside>
 
     <!-- 메인 콘텐츠 -->
@@ -30,8 +41,11 @@
 </template>
 
 <script setup>
-import { RouterView, RouterLink, useRoute } from 'vue-router'
-import { LayoutDashboard, Users } from 'lucide-vue-next'
+import { RouterView, RouterLink, useRoute, useRouter } from 'vue-router'
+import { LayoutDashboard, Users, LogOut } from 'lucide-vue-next'
+import { removeCookie } from '@/utils/cookie'
+
+const router = useRouter()
 
 const menus = [
   { name: 'dashboard', label: '대시보드', to: '/mentor/dashboard', icon: LayoutDashboard },
@@ -42,5 +56,12 @@ const route = useRoute()
 
 function isActive(to) {
   return route.path.startsWith(to)
+}
+
+function handleLogout() {
+  removeCookie('memberId')
+  removeCookie('memberRole')
+  removeCookie('memberName')
+  router.push('/login')
 }
 </script>
