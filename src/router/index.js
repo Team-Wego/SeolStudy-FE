@@ -11,6 +11,11 @@ const router = createRouter({
       name: 'Login',
       component: () => import('@/views/auth/LoginView.vue'),
     },
+    {
+      path: '/test',
+      name: 'ComponentTest',
+      component: () => import('@/views/ComponentTest.vue'),
+    },
     menteeRoutes,
     mentorRoutes,
     {
@@ -24,7 +29,7 @@ router.beforeEach((to) => {
   const memberId = getCookie('memberId')
 
   // 로그인 안 된 상태에서 로그인 외 페이지 접근 시
-  if (!memberId && to.name !== 'Login') {
+  if (!memberId && to.name !== 'Login' && to.name !== 'ComponentTest') {
     return { name: 'Login' }
   }
 
