@@ -1,65 +1,95 @@
 <template>
   <div class="flex items-center justify-center h-dvh bg-gray-50">
-    <div class="w-full max-w-sm p-8 bg-white rounded-2xl shadow-sm">
-      <h1 class="text-2xl font-bold text-center text-gray-900 mb-8">SeolStudy</h1>
+    <el-card class="w-full max-w-sm" shadow="hover">
+      <div class="text-center mb-8">
+        <h1 class="text-2xl font-bold text-gray-900">SeolStudy</h1>
+        <p class="text-sm text-gray-400 mt-2">학습 멘토링 플랫폼</p>
+      </div>
 
-      <form @submit.prevent="handleLogin" class="space-y-4">
-        <div>
-          <label for="email" class="block text-sm font-medium text-gray-700 mb-1">이메일</label>
-          <input
-            id="email"
-            v-model="email"
-            type="email"
+      <el-form
+        ref="formRef"
+        :model="form"
+        :rules="rules"
+        @submit.prevent="handleLogin"
+        label-position="top"
+      >
+        <el-form-item label="이메일" prop="email">
+          <el-input
+            v-model="form.email"
             placeholder="이메일을 입력하세요"
-            required
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            size="large"
+            :prefix-icon="Mail"
           />
-        </div>
+        </el-form-item>
 
-        <div>
-          <label for="password" class="block text-sm font-medium text-gray-700 mb-1">비밀번호</label>
-          <input
-            id="password"
-            v-model="password"
+        <el-form-item label="비밀번호" prop="password">
+          <el-input
+            v-model="form.password"
             type="password"
             placeholder="비밀번호를 입력하세요"
-            required
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            size="large"
+            show-password
+            :prefix-icon="Lock"
           />
-        </div>
+        </el-form-item>
 
-        <p v-if="errorMsg" class="text-sm text-red-500">{{ errorMsg }}</p>
+        <el-alert
+          v-if="errorMsg"
+          :title="errorMsg"
+          type="error"
+          show-icon
+          :closable="false"
+          class="mb-4"
+        />
 
-        <button
-          type="submit"
-          :disabled="loading"
-          class="w-full py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+        <el-button
+          type="primary"
+          size="large"
+          native-type="submit"
+          :loading="loading"
+          class="w-full"
         >
-          {{ loading ? '로그인 중...' : '로그인' }}
-        </button>
-      </form>
-    </div>
+          로그인
+        </el-button>
+      </el-form>
+    </el-card>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
+import { Mail, Lock } from 'lucide-vue-next'
 import { login } from '@/api/auth/authApi'
 import { setCookie } from '@/utils/cookie'
 
 const router = useRouter()
-const email = ref('')
-const password = ref('')
+const formRef = ref(null)
 const errorMsg = ref('')
 const loading = ref(false)
 
+const form = reactive({
+  email: '',
+  password: '',
+})
+
+const rules = {
+  email: [{ required: true, message: '이메일을 입력해주세요', trigger: 'blur' }],
+  password: [{ required: true, message: '비밀번호를 입력해주세요', trigger: 'blur' }],
+}
+
 async function handleLogin() {
+  try {
+    await formRef.value.validate()
+  } catch {
+    return
+  }
+
   errorMsg.value = ''
   loading.value = true
 
   try {
-    const { data } = await login(email.value, password.value)
+    const { data } = await login(form.email, form.password)
 
     setCookie('memberId', data.id)
     setCookie('memberRole', data.role)
