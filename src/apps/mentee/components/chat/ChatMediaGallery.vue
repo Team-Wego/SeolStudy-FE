@@ -2,8 +2,8 @@
   <el-dialog
     v-model="visible"
     title="공유된 미디어 & 파일"
-    width="100%"
-    :fullscreen="true"
+    width="720px"
+    top="5vh"
     @open="loadMedia"
   >
     <!-- 탭 필터 -->
@@ -152,9 +152,11 @@ function getFileIcon(fileName) {
 
 .gallery-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
   padding: 8px 0;
+  max-height: 65vh;
+  overflow-y: auto;
 }
 
 .gallery-item {
