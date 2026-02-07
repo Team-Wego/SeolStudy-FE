@@ -22,6 +22,9 @@ export const useChatStore = defineStore('chat', () => {
   // 로딩 상태
   const isLoading = ref(false)
 
+  // 읽지 않은 메시지 수
+  const unreadCount = ref(0)
+
   // 메시지 추가 (실시간 수신)
   function addMessage(message) {
     const exists = messages.value.some((m) => m.messageId === message.messageId)
@@ -35,11 +38,17 @@ export const useChatStore = defineStore('chat', () => {
     messages.value = msgList
   }
 
+  // 읽지 않은 메시지 수 설정
+  function setUnreadCount(count) {
+    unreadCount.value = count
+  }
+
   // 초기화
   function reset() {
     currentRoom.value = null
     messages.value = []
     isConnected.value = false
+    unreadCount.value = 0
   }
 
   return {
@@ -48,8 +57,10 @@ export const useChatStore = defineStore('chat', () => {
     messages,
     isConnected,
     isLoading,
+    unreadCount,
     addMessage,
     setMessages,
+    setUnreadCount,
     reset,
   }
 })
