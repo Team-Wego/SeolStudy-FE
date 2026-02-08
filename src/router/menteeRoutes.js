@@ -24,6 +24,11 @@ export default {
       component: () => import('@/apps/mentee/views/feedback/FeedbackView.vue'),
     },
     {
+      path: 'feedback/:id',
+      name: 'MenteeFeedbackDetail',
+      component: () => import('@/apps/mentee/views/feedback/FeedbackDetailView.vue'),
+    },
+    {
       path: 'chat',
       name: 'MenteeChat',
       component: () => import('@/apps/mentee/views/chat/ChatListView.vue'),

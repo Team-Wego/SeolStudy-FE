@@ -78,8 +78,8 @@
             <span v-if="fb.subject" class="subject-tag" :class="'tag-' + fb.subject">
               {{ subjectLabel(fb.subject) }}
             </span>
-            <span class="card-chapter">{{ fb.taskTitle || '일간 피드백' }}</span>
-            <span class="card-date">{{ formatDate(fb.createdAt) }}</span>
+            <span class="card-chapter">{{ fb.taskTitle || (activeTab === 'planner' ? '플래너 피드백' : '일간 피드백') }}</span>
+            <span class="card-date">{{ fb.targetDate ? formatTargetDate(fb.targetDate) : formatDate(fb.createdAt) }}</span>
           </div>
           <p class="card-content">{{ fb.content }}</p>
         </div>
@@ -88,17 +88,22 @@
 
     <!-- ===== 주간 탭 ===== -->
     <template v-if="activeTab === 'weekly'">
-      <div class="weekly-grid">
-        <div
-          v-for="(w, idx) in quarterWeeks"
-          :key="idx"
-          class="week-cell-box clickable"
-          :class="{ 'week-box-selected': selectedWeekIdx === idx, 'week-box-has': w.hasFeedback }"
-          @click="selectWeek(idx)"
-        >
-          <span class="week-box-label">{{ w.label }}</span>
-          <span v-if="w.hasFeedback" class="week-box-dot" />
-        </div>
+      <div class="weekly-section">
+        <template v-for="(row, rowIdx) in weeklyRows" :key="rowIdx">
+          <div class="weekly-row-header">{{ row.label }}</div>
+          <div class="weekly-row-grid">
+            <div
+              v-for="w in row.weeks"
+              :key="w.idx"
+              class="week-cell-box clickable"
+              :class="{ 'week-box-selected': selectedWeekIdx === w.idx, 'week-box-has': w.hasFeedback }"
+              @click="selectWeek(w.idx)"
+            >
+              <span class="week-box-label">{{ w.label }}</span>
+              <span v-if="w.hasFeedback" class="week-box-dot" />
+            </div>
+          </div>
+        </template>
       </div>
 
       <!-- 선택된 주의 WEEKLY 피드백 -->
@@ -185,7 +190,7 @@
         >
           <div class="card-header">
             <span class="card-chapter">플래너 피드백</span>
-            <span class="card-date">{{ formatDate(fb.createdAt) }}</span>
+            <span class="card-date">{{ fb.targetDate ? formatTargetDate(fb.targetDate) : formatDate(fb.createdAt) }}</span>
           </div>
           <p class="card-content">{{ fb.content }}</p>
         </div>
@@ -257,6 +262,12 @@ function formatDate(dateStr) {
   if (!dateStr) return ''
   const d = new Date(dateStr)
   return `${d.getFullYear()}. ${String(d.getMonth() + 1).padStart(2, '0')}. ${String(d.getDate()).padStart(2, '0')}`
+}
+
+function formatTargetDate(dateStr) {
+  if (!dateStr) return ''
+  const parts = dateStr.split('-')
+  return `${parts[0]}. ${parts[1]}. ${parts[2]}`
 }
 
 function getMonday(d) {
@@ -374,6 +385,21 @@ const quarterWeeks = computed(() => {
     mon.setDate(mon.getDate() + 7)
   }
   return weeks
+})
+
+// 주간: 5개씩 행 그룹 + 주차 라벨
+const weeklyRows = computed(() => {
+  const rows = []
+  const all = quarterWeeks.value
+  const perRow = 5
+  for (let i = 0; i < all.length; i += perRow) {
+    const chunk = all.slice(i, i + perRow).map((w, j) => ({ ...w, idx: i + j }))
+    rows.push({
+      label: `${i + 1}주차 ~ ${Math.min(i + perRow, all.length)}주차`,
+      weeks: chunk,
+    })
+  }
+  return rows
 })
 
 // 주간: 선택된 주의 WEEKLY 피드백 (1개)
@@ -725,11 +751,25 @@ onMounted(() => loadData())
 }
 
 /* 주간 그리드 (dot 스타일) */
-.weekly-grid {
+.weekly-section {
+  margin-bottom: 20px;
+}
+
+.weekly-row-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: #999;
+  margin: 12px 0 6px;
+}
+
+.weekly-row-header:first-child {
+  margin-top: 0;
+}
+
+.weekly-row-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 8px;
-  margin-bottom: 20px;
 }
 
 .week-cell-box {
