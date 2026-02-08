@@ -5,3 +5,22 @@ export function getTaskDailyStatus(menteeId, startDate, endDate, taskType) {
         params: { startDate, endDate, taskType },
     });
 }
+
+export function getTasks(menteeId, startDate, endDate) {
+    return api.get(`/mentees/${menteeId}/tasks`, {
+        params: { startDate, endDate },
+    });
+}
+
+export function getGoals(menteeId, createdBy = 'ALL') {
+    return api.get('/goals', {
+        params: { menteeId, createdBy },
+    });
+}
+
+export function getWorksheetFiles(menteeId, keyword, subject) {
+    const params = { menteeId };
+    if (keyword) params.keyword = keyword;
+    if (subject) params.subject = subject;
+    return api.get(`/mentees/${menteeId}/worksheets`, { params });
+}

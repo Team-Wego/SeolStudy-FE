@@ -6,12 +6,7 @@
     <!-- Profile Section -->
     <div class="profile-section">
       <div class="profile-avatar">
-        <img
-          v-if="member.profileUrl"
-          :src="member.profileUrl"
-          alt="프로필"
-          class="avatar-img"
-        />
+        <img v-if="member.profileUrl" :src="member.profileUrl" alt="프로필" class="avatar-img" />
         <div v-else class="avatar-placeholder">
           <User :size="32" color="#A6A6A6" />
         </div>
@@ -22,7 +17,8 @@
           <span class="profile-grade">{{ gradeLabel }}</span>
         </div>
         <button class="edit-photo-btn" @click="handleEditPhoto">
-          사진 수정하기 <ChevronRight :size="14" color="#A6A6A6" />
+          사진 수정하기
+          <ChevronRight :size="14" color="#A6A6A6" />
         </button>
       </div>
     </div>
@@ -35,16 +31,10 @@
           <img :src="mailbox" />
         </h2>
         <div class="tab-toggle">
-          <button
-            :class="['tab-btn', { active: viewMode === 'weekly' }]"
-            @click="viewMode = 'weekly'"
-          >
+          <button :class="['tab-btn', { active: viewMode === 'weekly' }]" @click="viewMode = 'weekly'">
             주간
           </button>
-          <button
-            :class="['tab-btn', { active: viewMode === 'monthly' }]"
-            @click="viewMode = 'monthly'"
-          >
+          <button :class="['tab-btn', { active: viewMode === 'monthly' }]" @click="viewMode = 'monthly'">
             월간
           </button>
         </div>
@@ -58,16 +48,9 @@
         </div>
         <p class="rate-label">이번 주 과제 달성률</p>
         <div class="bar-chart">
-          <div
-            v-for="(day, idx) in weeklyData"
-            :key="idx"
-            class="bar-col"
-          >
+          <div v-for="(day, idx) in weeklyData" :key="idx" class="bar-col">
             <div class="bar-track">
-              <div
-                class="bar-fill"
-                :style="{ height: day.rate + '%' }"
-              />
+              <div class="bar-fill" :style="{ height: day.rate + '%' }" />
             </div>
             <span class="bar-label">{{ day.label }}</span>
           </div>
@@ -87,9 +70,7 @@
           </div>
           <div class="heatmap-grid">
             <template v-for="(cell, idx) in monthlyHeatmapData" :key="idx">
-              <div
-                :class="['heatmap-cell', cell.level]"
-              />
+              <div :class="['heatmap-cell', cell.level]" />
             </template>
           </div>
         </div>
@@ -100,11 +81,8 @@
     <div class="subject-section">
       <h2 class="section-title">과목별 현황</h2>
       <div class="subject-list">
-        <div
-          v-for="subject in subjectList"
-          :key="subject.subject"
-          class="subject-card"
-        >
+        <div v-for="subject in subjectList" :key="subject.subject" class="subject-card clickable"
+          @click="goToSubject(subject.subject)">
           <div class="subject-card-left">
             <span class="subject-name">{{ subjectNameMap[subject.subject] || subject.subject }}</span>
             <span class="subject-detail">
@@ -112,9 +90,7 @@
             </span>
           </div>
           <div class="subject-card-right">
-            <span
-              :class="['subject-badge', getBadgeColor(subject.achievementRate)]"
-            >
+            <span :class="['subject-badge', getBadgeColor(subject.achievementRate)]">
               {{ subject.achievementRate }}%
             </span>
             <ChevronRight :size="18" color="#C2C2C2" />
@@ -123,14 +99,54 @@
       </div>
     </div>
 
+    <!-- Divider -->
+    <div class="section-divider" />
+
+    <!-- Library -->
+    <div class="subject-section">
+      <div class="subject-list">
+        <div class="subject-card clickable" @click="router.push('/mentee/mypage/library')">
+          <div class="subject-card-title">
+            <div class="subject-card-title-header">
+              <h2 class="section-title" style="margin: 0px;">
+                자료실
+                <img :src="folder" />
+              </h2>
+            </div>
+            <span class="subject-detail">
+              멘토가 업로드한 학습 자료를 한 곳에서 확인해요.
+            </span>
+          </div>
+          <ChevronRight :size="20" color="#C2C2C2" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Divider -->
+    <div class="section-divider" />
+
     <!-- Logout -->
-    <button
-      @click="handleLogout"
-      class="logout-btn"
-    >
-      <LogOut :size="18" />
-      <span>로그아웃</span>
+    <button class="logout-text-btn" @click="showLogoutModal = true">
+      <div class="logout-text-left">
+        <LogOut :size="18" color="#E9412E" />
+        <span>로그아웃</span>
+      </div>
+      <!-- <ChevronRight :size="16" color="#C2C2C2" /> -->
     </button>
+
+    <!-- Logout Modal -->
+    <Teleport to="body">
+      <div v-if="showLogoutModal" class="modal-overlay" @click.self="showLogoutModal = false">
+        <div class="modal-card">
+          <p class="modal-title">로그아웃 하시겠습니까?</p>
+          <p class="modal-desc">다시 로그인해야 이용할 수 있어요.</p>
+          <div class="modal-actions">
+            <button class="modal-cancel" @click="showLogoutModal = false">취소</button>
+            <button class="modal-confirm" @click="handleLogout">로그아웃</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
 
     <!-- Consultation Button (Fixed) -->
     <button class="consult-btn" @click="openConsultForm">
@@ -143,11 +159,12 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { LogOut, ChevronRight, User, Headphones } from 'lucide-vue-next'
+import { ChevronRight, User, Headphones, LogOut } from 'lucide-vue-next'
 import { removeCookie, getCookie } from '@/utils/cookie'
 import { getMember, getStudyStatus } from '@/api/member/memberApi'
 import { getTaskDailyStatus } from '@/api/task/taskApi'
 import mailbox from '@/assets/icons/mailbox.svg'
+import folder from '@/assets/icons/folder.svg'
 import {
   startOfWeek,
   endOfWeek,
@@ -164,6 +181,7 @@ const member = ref({})
 const studyStatus = ref({})
 const weeklyTaskMap = ref({})
 const monthlyTaskMap = ref({})
+const showLogoutModal = ref(false)
 
 const dayLabels = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
 
@@ -286,7 +304,26 @@ function openConsultForm() {
   window.open('https://forms.gle/FchKdDcm23JdGHpK9', '_blank')
 }
 
+function goToSubject(subjectKey) {
+  const today = new Date()
+  let startDate, endDate
+
+  if (viewMode.value === 'weekly') {
+    startDate = format(startOfWeek(today, { weekStartsOn: 1 }), 'yyyy-MM-dd')
+    endDate = format(endOfWeek(today, { weekStartsOn: 1 }), 'yyyy-MM-dd')
+  } else {
+    startDate = format(startOfMonth(today), 'yyyy-MM-dd')
+    endDate = format(endOfMonth(today), 'yyyy-MM-dd')
+  }
+
+  router.push({
+    path: `/mentee/mypage/subject/${subjectKey}`,
+    query: { startDate, endDate, mode: viewMode.value },
+  })
+}
+
 function handleLogout() {
+  showLogoutModal.value = false
   removeCookie('memberId')
   removeCookie('memberRole')
   removeCookie('memberName')
@@ -344,7 +381,8 @@ async function fetchWeeklyTaskMap() {
 
     const endDate = format(endOfWeek(today, { weekStartsOn: 1 }), 'yyyy-MM-dd');
 
-    const res = await getTaskDailyStatus(memberId, startDate, endDate, 'ASSIGNMENT');
+    // const res = await getTaskDailyStatus(memberId, startDate, endDate, 'ASSIGNMENT');
+    const res = await getTaskDailyStatus(memberId, startDate, endDate);
 
     const map = {};
 
@@ -367,7 +405,8 @@ async function fetchMonthlyTaskMap() {
     const startDate = format(startOfMonth(today), 'yyyy-MM-dd');
     const endDate = format(endOfMonth(today), 'yyyy-MM-dd');
 
-    const res = await getTaskDailyStatus(memberId, startDate, endDate, 'ASSIGNMENT');
+    // const res = await getTaskDailyStatus(memberId, startDate, endDate, 'ASSIGNMENT');
+    const res = await getTaskDailyStatus(memberId, startDate, endDate);
 
     const map = {};
     res.data.forEach((item) => {
@@ -406,7 +445,7 @@ onMounted(() => {
   font-size: 20px;
   font-weight: 700;
   text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   color: #1A1A1A;
 }
 
@@ -419,8 +458,8 @@ onMounted(() => {
 }
 
 .profile-avatar {
-  width: 60px;
-  height: 60px;
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
   overflow: hidden;
   background: #E8E8E8;
@@ -461,7 +500,7 @@ onMounted(() => {
 }
 
 .profile-grade {
-  font-size: 13px;
+  font-size: 14px;
   color: #8E8E93;
 }
 
@@ -469,7 +508,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 2px;
-  font-size: 13px;
+  font-size: 12px;
   color: #A6A6A6;
   background: none;
   border: none;
@@ -490,7 +529,7 @@ onMounted(() => {
 }
 
 .section-title {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
   color: #1A1A1A;
   display: flex;
@@ -498,40 +537,40 @@ onMounted(() => {
   gap: 6px;
 }
 
-.section-title img{
+.section-title img {
   width: 20px;
 }
 
 .tab-toggle {
   display: flex;
-  border: 1.5px solid #E5E5EA;
-  border-radius: 20px;
-  overflow: hidden;
-  background: #fff;
+  padding: 3px;
+  background: #EBEBEB;
+  border-radius: 21px;
 }
 
 .tab-btn {
-  padding: 7px 18px;
-  font-size: 13px;
-  font-weight: 600;
+  padding: 6px 14px;
+  font-size: 14px;
+  font-weight: 700;
   border: none;
   cursor: pointer;
-  background: #fff;
+  background: transparent;
   color: #8E8E93;
+  border-radius: 30px;
   transition: all 0.2s;
-  border-radius: 20px;
 }
 
 .tab-btn.active {
-  background: #3D3D3D;
-  color: #fff;
+  background: #fff;
+  color: #333;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 /* Chart Card */
 .chart-card {
   background: #fff;
-  border-radius: 20px;
-  padding: 24px 20px;
+  border-radius: 28px;
+  padding: 24px 22px;
 }
 
 .chart-rate {
@@ -542,20 +581,19 @@ onMounted(() => {
 .rate-number {
   font-size: 36px;
   font-weight: 700;
-  color: #1A1A1A;
+  color: #8E8E93;
 }
 
 .rate-percent {
-  font-size: 20px;
-  font-weight: 600;
-  color: #1A1A1A;
+  font-size: 16px;
+  font-weight: 700;
+  color: #8E8E93;
   margin-left: 2px;
 }
 
 .rate-label {
-  font-size: 13px;
+  font-size: 12px;
   color: #8E8E93;
-  margin-top: 2px;
   margin-bottom: 20px;
 }
 
@@ -565,7 +603,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: flex-end;
   gap: 8px;
-  height: 140px;
+  height: 100px;
 }
 
 .bar-col {
@@ -597,7 +635,8 @@ onMounted(() => {
 
 .bar-label {
   font-size: 12px;
-  color: #8E8E93;
+  color: black;
+  font-weight: 700;
   margin-top: 8px;
 }
 
@@ -676,8 +715,29 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   background: #fff;
-  border-radius: 16px;
-  padding: 18px 16px;
+  border-radius: 28px;
+  padding: 20px 24px;
+}
+
+.subject-card.clickable {
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.subject-card.clickable:active {
+  background: #F5F5F5;
+}
+
+.subject-card-title {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.subject-card-title-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .subject-card-left {
@@ -742,7 +802,7 @@ onMounted(() => {
   background: #0CA5FE;
   color: #fff;
   border: none;
-  border-radius: 50px;
+  border-radius: 22.5px;
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
@@ -755,24 +815,93 @@ onMounted(() => {
   transform: scale(1.03);
 }
 
-/* Logout */
-.logout-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 12px 4px;
-  background: none;
-  border: none;
-  font-size: 14px;
-  font-weight: 500;
-  color: #E9412E;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  border-radius: 8px;
+/* Section Divider */
+.section-divider {
+  height: 1px;
+  background: #E5E5EA;
+  margin: 0 4px 24px;
 }
 
-.logout-btn:hover {
-  background: #FEF2F2;
+/* Logout Button */
+.logout-text-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 16px 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  margin-bottom: 24px;
+}
+
+.logout-text-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #E9412E;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.modal-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 28px 24px 20px;
+  width: 280px;
+  text-align: center;
+}
+
+.modal-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #1A1A1A;
+  margin-bottom: 8px;
+}
+
+.modal-desc {
+  font-size: 14px;
+  color: #8E8E93;
+  margin-bottom: 24px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.modal-cancel {
+  flex: 1;
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
+  background: #F3F4F6;
+  color: #3D3D3D;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.modal-confirm {
+  flex: 1;
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
+  background: #E9412E;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
 }
 </style>
