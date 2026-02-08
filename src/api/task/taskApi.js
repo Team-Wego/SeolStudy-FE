@@ -11,3 +11,11 @@ export function getDailyTasks(menteeId, date) {
 export function getWeeklyTasks(menteeId, startDate, endDate) {
   return api.get(`/mentees/${menteeId}/tasks`, { params: { startDate, endDate } })
 }
+
+export function createStudyTime(menteeId, data) {
+  return api.post(`/mentees/${menteeId}/study-times`, data)
+}
+
+export function getDailyStudyTimes(menteeId, date) {
+  return api.get(`/mentees/${menteeId}/planner/study-time`, { params: { date } })
+}
