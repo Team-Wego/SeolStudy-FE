@@ -6,9 +6,9 @@ export function getTaskDailyStatus(menteeId, startDate, endDate, taskType) {
     });
 }
 
-export function getTasks(menteeId, startDate, endDate) {
+export function getTasks(menteeId, startDate, endDate, taskType) {
     return api.get(`/mentees/${menteeId}/tasks`, {
-        params: { startDate, endDate },
+        params: { startDate, endDate, taskType },
     });
 }
 

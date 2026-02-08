@@ -44,7 +44,7 @@
               <span class="task-date">{{ formatTaskDate(task.date) }}</span>
             </div>
           </div>
-          <StatusBadge :type="task.isChecked ? 'complete' : 'incomplete'" size="md" />
+          <StatusBadge :type="task.checked ? 'complete' : 'incomplete'" size="md" />
         </div>
       </div>
 
@@ -122,7 +122,7 @@ async function fetchTasks() {
       endDate = format(endOfWeek(today, { weekStartsOn: 1 }), 'yyyy-MM-dd')
     }
 
-    const res = await getTasks(memberId, startDate, endDate)
+    const res = await getTasks(memberId, startDate, endDate, 'ASSIGNMENT')
 
     // 해당 과목만 필터링
     taskList.value = res.data.filter((task) => task.subject === subject)
@@ -258,8 +258,13 @@ onMounted(() => {
 }
 
 @keyframes skeleton-shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 .skeleton-text {

@@ -34,6 +34,11 @@ export default {
       component: () => import('@/apps/mentee/views/mypage/MyPageView.vue'),
     },
     {
+      path: 'mypage/profile',
+      name: 'MenteeProfileEdit',
+      component: () => import('@/apps/mentee/views/mypage/ProfileEditView.vue'),
+    },
+    {
       path: 'mypage/library',
       name: 'MenteeLibrary',
       component: () => import('@/apps/mentee/views/mypage/library/LibraryView.vue'),

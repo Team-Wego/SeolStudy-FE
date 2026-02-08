@@ -1,8 +1,5 @@
 <template>
   <div class="mypage">
-    <!-- Header -->
-    <h1 class="page-title">마이페이지</h1>
-
     <!-- Profile Section -->
     <div v-if="profileLoading" class="profile-section">
       <div class="skeleton skeleton-avatar" />
@@ -23,8 +20,8 @@
           <span class="profile-name">{{ member.name || '이름' }}</span>
           <span class="profile-grade">{{ gradeLabel }}</span>
         </div>
-        <button class="edit-photo-btn" @click="handleEditPhoto">
-          사진 수정하기
+        <button class="edit-photo-btn" @click="router.push('/mentee/mypage/profile')">
+          프로필 수정하기
           <ChevronRight :size="14" color="#A6A6A6" />
         </button>
       </div>
@@ -78,7 +75,7 @@
           <span class="rate-number">{{ studyStatus.achievementRate ?? 0 }}</span>
           <span class="rate-percent">%</span>
         </div>
-        <p class="rate-label">이번 주 과제 달성률</p>
+        <p class="rate-label">이번 주 필수 과제 달성률</p>
         <div class="bar-chart">
           <div v-for="(day, idx) in weeklyData" :key="idx" class="bar-col">
             <div class="bar-track">
@@ -341,10 +338,6 @@ function getBadgeColor(rate) {
   return 'badge-red'
 }
 
-function handleEditPhoto() {
-  // TODO: 사진 수정 기능
-}
-
 function openConsultForm() {
   window.open('https://forms.gle/FchKdDcm23JdGHpK9', '_blank')
 }
@@ -410,7 +403,7 @@ async function fetchStudyStatus() {
       endDate = format(endOfMonth(today), 'yyyy-MM-dd');
     }
 
-    const res = await getStudyStatus(memberId, startDate, endDate);
+    const res = await getStudyStatus(memberId, startDate, endDate, 'ASSIGNMENT');
 
     studyStatus.value = res.data;
   } catch (e) {
@@ -432,8 +425,7 @@ async function fetchWeeklyTaskMap() {
 
     const endDate = format(endOfWeek(today, { weekStartsOn: 1 }), 'yyyy-MM-dd');
 
-    // const res = await getTaskDailyStatus(memberId, startDate, endDate, 'ASSIGNMENT');
-    const res = await getTaskDailyStatus(memberId, startDate, endDate);
+    const res = await getTaskDailyStatus(memberId, startDate, endDate, 'ASSIGNMENT');
 
     const map = {};
 
@@ -456,8 +448,7 @@ async function fetchMonthlyTaskMap() {
     const startDate = format(startOfMonth(today), 'yyyy-MM-dd');
     const endDate = format(endOfMonth(today), 'yyyy-MM-dd');
 
-    // const res = await getTaskDailyStatus(memberId, startDate, endDate, 'ASSIGNMENT');
-    const res = await getTaskDailyStatus(memberId, startDate, endDate);
+    const res = await getTaskDailyStatus(memberId, startDate, endDate, 'ASSIGNMENT');
 
     const map = {};
     res.data.forEach((item) => {
@@ -489,7 +480,7 @@ onMounted(() => {
 .mypage {
   padding: 16px 20px 100px;
   background: #F5F5F5;
-  min-height: 100vh;
+  min-height: 100%;
 }
 
 .page-title {
@@ -879,11 +870,11 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 16px 4px;
+  /* padding: 16px 4px; */
+  padding: 4px;
   background: none;
   border: none;
   cursor: pointer;
-  margin-bottom: 24px;
 }
 
 .logout-text-left {
@@ -973,8 +964,13 @@ onMounted(() => {
 }
 
 @keyframes skeleton-shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 .skeleton-avatar {
