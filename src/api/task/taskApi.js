@@ -40,9 +40,29 @@ export function getWeeklyTasks(menteeId, startDate, endDate) {
 }
 
 export function createStudyTime(menteeId, data) {
-  return api.post(`/mentees/${menteeId}/study-times`, data)
+    return api.post(`/mentees/${menteeId}/study-times`, data);
 }
 
 export function getDailyStudyTimes(menteeId, date) {
-  return api.get(`/mentees/${menteeId}/planner/study-time`, { params: { date } })
+    return api.get(`/mentees/${menteeId}/planner/study-time`, {
+        params: { date },
+    });
+}
+
+export function getPlannerComment(menteeId, date) {
+    return api.get(`/mentees/${menteeId}/planner/comments`, {
+        params: { date },
+    });
+}
+
+export function getStudyTime(menteeId, date) {
+    return api.get(`/mentees/${menteeId}/planner/study-time`, {
+        params: { date },
+    });
+}
+
+export function updateTaskStatus(menteeId, taskId, isChecked) {
+    return api.put(`/mentees/${menteeId}/tasks/${taskId}/status`, {
+        isChecked,
+    });
 }
