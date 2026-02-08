@@ -49,7 +49,7 @@ import { Home, Calendar, MessageSquareText, MessagesSquare, User } from 'lucide-
 import { useChatStore } from '@/stores/chatStore'
 import { getMenteeRooms, getUnreadCount } from '@/api/chat/chatApi'
 
-const POLL_INTERVAL = 15000 // 15초마다 폴링
+const POLL_INTERVAL = 5000 // 5초마다 폴링
 
 const tabs = [
   { name: 'calendar', label: '캘린더', to: '/mentee/calendar', icon: Calendar },

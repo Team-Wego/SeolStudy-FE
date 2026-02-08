@@ -11,13 +11,19 @@
           v-for="menu in menus"
           :key="menu.name"
           :to="menu.to"
-          class="flex items-center gap-3 px-5 py-4 rounded-lg text-base font-medium transition-colors"
+          class="relative flex items-center gap-3 px-5 py-4 rounded-lg text-base font-medium transition-colors"
           :class="isActive(menu.to)
             ? 'bg-blue-50 text-blue-600'
             : 'text-gray-600 hover:bg-gray-100'"
         >
           <component :is="menu.icon" :size="20" />
           <span>{{ menu.label }}</span>
+          <span
+            v-if="menu.name === 'chat' && totalUnread > 0"
+            class="unread-badge"
+          >
+            {{ totalUnread > 99 ? '99+' : totalUnread }}
+          </span>
         </RouterLink>
       </nav>
 
@@ -41,11 +47,14 @@
 </template>
 
 <script setup>
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { RouterView, RouterLink, useRoute, useRouter } from 'vue-router'
 import { LayoutDashboard, Users, MessageSquare, LogOut } from 'lucide-vue-next'
-import { removeCookie } from '@/utils/cookie'
+import { removeCookie, getCookie } from '@/utils/cookie'
+import { getMentorRooms } from '@/api/chat/chatApi'
 
 const router = useRouter()
+const route = useRoute()
 
 const menus = [
   { name: 'dashboard', label: '대시보드', to: '/mentor/dashboard', icon: LayoutDashboard },
@@ -53,11 +62,48 @@ const menus = [
   { name: 'mentee-list', label: '담당 멘티 목록', to: '/mentor/mentees', icon: Users },
 ]
 
-const route = useRoute()
+const totalUnread = ref(0)
+let pollTimer = null
+const POLL_INTERVAL = 5000
 
 function isActive(to) {
   return route.path.startsWith(to)
 }
+
+async function fetchUnreadCount() {
+  // 채팅 페이지에 있으면 스킵
+  if (route.path.startsWith('/mentor/chat')) return
+
+  const memberId = getCookie('memberId')
+  if (!memberId) return
+
+  try {
+    const { data: rooms } = await getMentorRooms(Number(memberId))
+    const total = (rooms || []).reduce((sum, room) => sum + (room.mentorUnreadCount || 0), 0)
+    totalUnread.value = total
+  } catch {
+    // 무시
+  }
+}
+
+// 채팅 페이지에서 나올 때 즉시 갱신
+watch(() => route.path, (newPath, oldPath) => {
+  if (oldPath?.startsWith('/mentor/chat') && !newPath.startsWith('/mentor/chat')) {
+    fetchUnreadCount()
+  }
+  if (newPath.startsWith('/mentor/chat')) {
+    totalUnread.value = 0
+  }
+})
+
+onMounted(() => {
+  fetchUnreadCount()
+  pollTimer = setInterval(fetchUnreadCount, POLL_INTERVAL)
+})
+
+onUnmounted(() => {
+  if (pollTimer) clearInterval(pollTimer)
+})
 
 function handleLogout() {
   removeCookie('memberId')
@@ -66,3 +112,19 @@ function handleLogout() {
   router.push('/login')
 }
 </script>
+
+<style scoped>
+.unread-badge {
+  margin-left: auto;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  background: #FF3B30;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+  border-radius: 10px;
+}
+</style>

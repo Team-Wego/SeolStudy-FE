@@ -110,6 +110,8 @@ const selectedMenteeName = ref('')
 const messageListRef = ref(null)
 const showGallery = ref(false)
 let wsConnected = false
+let roomPollTimer = null
+const ROOM_POLL_INTERVAL = 5000
 
 // 채팅방 목록 로드
 async function loadRooms() {
@@ -118,7 +120,14 @@ async function loadRooms() {
 
   try {
     const { data } = await getMentorRooms(userId)
-    rooms.value = data || []
+    // 현재 선택된 방의 unreadCount는 0으로 유지
+    const newRooms = (data || []).map((r) => {
+      if (r.roomId === selectedRoomId.value) {
+        r.mentorUnreadCount = 0
+      }
+      return r
+    })
+    rooms.value = newRooms
   } catch (err) {
     console.error('[MentorChat] 채팅방 목록 로드 실패:', err)
   } finally {
@@ -201,9 +210,11 @@ function formatDate(dateStr) {
 
 onMounted(() => {
   loadRooms()
+  roomPollTimer = setInterval(loadRooms, ROOM_POLL_INTERVAL)
 })
 
 onUnmounted(() => {
+  if (roomPollTimer) clearInterval(roomPollTimer)
   disconnect()
   chatStore.reset()
 })
