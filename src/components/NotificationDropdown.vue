@@ -25,24 +25,25 @@
           </div>
           <template v-else>
             <div
-              v-for="noti in notifications"
-              :key="noti.id"
+              v-for="item in groupedNotifications"
+              :key="item.id"
               class="noti-item"
-              :class="{ unread: !noti.isRead }"
-              @click="handleClick(noti)"
+              :class="{ unread: item.hasUnread }"
+              @click="handleClick(item)"
             >
               <div class="noti-icon">
-                <MessageSquareText v-if="noti.type === 'CHAT'" :size="16" color="#0CA5FE" />
-                <ClipboardCheck v-else-if="noti.type === 'TASK_REMINDER'" :size="16" color="#FF9500" />
-                <MessageCircle v-else-if="noti.type === 'FEEDBACK'" :size="16" color="#34C759" />
+                <MessageSquareText v-if="item.type === 'CHAT'" :size="16" color="#0CA5FE" />
+                <ClipboardCheck v-else-if="item.type === 'TASK_REMINDER'" :size="16" color="#FF9500" />
+                <MessageCircle v-else-if="item.type === 'FEEDBACK'" :size="16" color="#34C759" />
                 <BellRing v-else :size="16" color="#666" />
               </div>
               <div class="noti-content">
-                <p class="noti-title">{{ noti.title }}</p>
-                <p class="noti-body">{{ noti.body }}</p>
-                <span class="noti-time">{{ formatTime(noti.createdAt) }}</span>
+                <p class="noti-title">{{ item.title }}</p>
+                <p class="noti-body">{{ item.body }}</p>
+                <span class="noti-time">{{ formatTime(item.createdAt) }}</span>
               </div>
-              <div v-if="!noti.isRead" class="noti-dot" />
+              <span v-if="item.count > 1" class="noti-count">{{ item.count }}</span>
+              <div v-if="item.hasUnread" class="noti-dot" />
             </div>
             <div v-if="loading" class="dropdown-loading">불러오는 중...</div>
           </template>
@@ -53,7 +54,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Bell, BellRing, MessageSquareText, ClipboardCheck, MessageCircle } from 'lucide-vue-next'
 import { getCookie } from '@/utils/cookie'
 import {
@@ -111,6 +112,55 @@ async function fetchNotifications(page = 0) {
   }
 }
 
+// 채팅 알림을 roomId 기준으로 통합
+const groupedNotifications = computed(() => {
+  const result = []
+  const chatGroups = new Map() // roomId → grouped item
+
+  for (const noti of notifications.value) {
+    if (noti.type === 'CHAT' && noti.data?.roomId) {
+      const roomId = noti.data.roomId
+      if (chatGroups.has(roomId)) {
+        const group = chatGroups.get(roomId)
+        group.count++
+        group.ids.push(noti.id)
+        if (!noti.isRead) group.hasUnread = true
+        // 가장 최신 시간 유지 (첫 번째가 가장 최신)
+      } else {
+        const group = {
+          id: `chat-${roomId}`,
+          type: 'CHAT',
+          title: noti.title,
+          body: noti.body,
+          createdAt: noti.createdAt,
+          hasUnread: !noti.isRead,
+          count: 1,
+          ids: [noti.id],
+          data: noti.data,
+        }
+        chatGroups.set(roomId, group)
+        result.push(group)
+      }
+    } else {
+      result.push({
+        ...noti,
+        hasUnread: !noti.isRead,
+        count: 1,
+        ids: [noti.id],
+      })
+    }
+  }
+
+  // 통합된 채팅 알림 body 업데이트
+  for (const group of chatGroups.values()) {
+    if (group.count > 1) {
+      group.body = `${group.count}개의 새 메시지`
+    }
+  }
+
+  return result
+})
+
 // 드롭다운 토글
 function toggle() {
   open.value = !open.value
@@ -121,16 +171,28 @@ function toggle() {
   }
 }
 
-// 알림 클릭 → 읽음 처리
-async function handleClick(noti) {
-  if (!noti.isRead) {
-    try {
-      await markNotificationAsRead(noti.id)
-      noti.isRead = true
-      unreadCount.value = Math.max(0, unreadCount.value - 1)
-    } catch (e) {
-      console.error('[Notification] 읽음 처리 실패:', e)
+// 알림 클릭 → 읽음 처리 (통합된 알림은 모든 하위 알림 읽음 처리)
+async function handleClick(item) {
+  if (!item.hasUnread) return
+
+  try {
+    // 통합된 알림의 읽지 않은 항목들 모두 읽음 처리
+    const unreadIds = item.ids.filter((id) => {
+      const noti = notifications.value.find((n) => n.id === id)
+      return noti && !noti.isRead
+    })
+
+    await Promise.all(unreadIds.map((id) => markNotificationAsRead(id)))
+
+    // 원본 데이터도 업데이트
+    for (const id of unreadIds) {
+      const noti = notifications.value.find((n) => n.id === id)
+      if (noti) noti.isRead = true
     }
+
+    unreadCount.value = Math.max(0, unreadCount.value - unreadIds.length)
+  } catch (e) {
+    console.error('[Notification] 읽음 처리 실패:', e)
   }
 }
 
@@ -323,6 +385,21 @@ onUnmounted(() => {
 .noti-time {
   font-size: 11px;
   color: #aaa;
+}
+
+.noti-count {
+  flex-shrink: 0;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  background: #0ca5fe;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+  border-radius: 10px;
+  margin-top: 4px;
 }
 
 .noti-dot {
