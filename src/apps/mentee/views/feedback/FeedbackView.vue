@@ -74,13 +74,16 @@
           class="feedback-card"
           @click="goToDetail(fb.feedbackId)"
         >
-          <div class="card-header">
-            <span v-if="fb.subject" class="subject-tag" :class="'tag-' + fb.subject">
-              {{ subjectLabel(fb.subject) }}
-            </span>
-            <span class="card-chapter">{{ fb.taskTitle || (activeTab === 'planner' ? '플래너 피드백' : '일간 피드백') }}</span>
+          <div class="card-top-row">
+            <div class="card-top-left">
+              <span v-if="fb.subject" class="subject-tag" :class="'tag-' + fb.subject">
+                {{ subjectLabel(fb.subject) }}
+              </span>
+              <span class="card-chapter">{{ fb.taskTitle || (activeTab === 'planner' ? '플래너 피드백' : '일간 피드백') }}</span>
+            </div>
             <span class="card-date">{{ fb.targetDate ? formatTargetDate(fb.targetDate) : formatDate(fb.createdAt) }}</span>
           </div>
+          <div v-if="fb.taskTitle" class="card-subtitle">{{ fb.taskTitle }}</div>
           <p class="card-content">{{ fb.content }}</p>
         </div>
       </div>
@@ -547,44 +550,47 @@ onMounted(() => loadData())
 }
 
 .page-title {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
   text-align: center;
-  margin: 0 0 16px;
-  color: #333;
+  margin: 0 0 20px;
+  color: #1a1a1a;
 }
 
 /* 탭 */
 .tab-group {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 20px;
+  display: inline-flex;
+  gap: 4px;
+  margin-bottom: 24px;
+  background: #f0f0f0;
+  border-radius: 28px;
+  padding: 4px;
 }
 
 .tab-chip {
-  padding: 6px 16px;
-  border-radius: 20px;
-  border: 1px solid #e0e0e0;
-  background: #fff;
-  font-size: 13px;
-  font-weight: 500;
-  color: #666;
+  padding: 8px 18px;
+  border-radius: 24px;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  color: #999;
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .tab-chip.active {
-  background: #333;
-  color: #fff;
-  border-color: #333;
+  background: #fff;
+  color: #1a1a1a;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* 날짜 네비게이션 */
 .date-nav {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 16px;
+  margin-bottom: 20px;
 }
 
 .nav-btn {
@@ -597,9 +603,10 @@ onMounted(() => loadData())
 }
 
 .nav-label {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
-  color: #333;
+  color: #1a1a1a;
+  letter-spacing: -0.3px;
 }
 
 /* 주간 캘린더 (일간/플래너) */
@@ -607,143 +614,156 @@ onMounted(() => loadData())
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 6px;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 .week-cell {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   cursor: pointer;
-  padding: 4px 0;
-  border-radius: 8px;
+  padding: 8px 0;
+  border-radius: 12px;
   transition: background 0.15s;
 }
 
 .week-cell.selected {
-  background: #f0f7ff;
+  background: #f0f4f8;
 }
 
 .week-day-label {
-  font-size: 12px;
-  color: #999;
+  font-size: 13px;
+  color: #aaa;
   font-weight: 500;
 }
 
 .week-day-num {
-  font-size: 14px;
-  font-weight: 600;
-  color: #333;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a1a1a;
 }
 
 /* 카운트 뱃지 */
 .count-badge {
-  min-width: 36px;
-  height: 28px;
+  min-width: 40px;
+  height: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
-  background: #e8f5e9;
-  color: #333;
+  border-radius: 14px;
+  background: #4AF38A;
+  color: #1a1a1a;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .count-badge.empty {
-  background: #f5f5f5;
+  background: #f0f0f0;
+  min-width: 40px;
 }
 
 .count-badge.badge-active {
-  background: #66bb6a;
+  background: #3ad67a;
   color: #fff;
 }
 
 /* 과목 필터 */
 .filter-group {
   display: flex;
-  gap: 8px;
-  margin-bottom: 20px;
+  gap: 10px;
+  margin-bottom: 24px;
   flex-wrap: wrap;
 }
 
 .filter-chip {
-  padding: 6px 16px;
-  border-radius: 20px;
-  border: 1px solid #e0e0e0;
+  padding: 8px 20px;
+  border-radius: 24px;
+  border: 1.5px solid #ddd;
   background: #fff;
-  font-size: 13px;
-  font-weight: 500;
-  color: #666;
+  font-size: 14px;
+  font-weight: 600;
+  color: #aaa;
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .filter-chip.active {
-  background: #333;
+  background: #42a5f5;
   color: #fff;
-  border-color: #333;
+  border-color: #42a5f5;
 }
 
 /* 피드백 카드 */
 .feedback-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 .feedback-card {
   background: #fff;
-  border: 1px solid #f0f0f0;
-  border-radius: 12px;
-  padding: 16px;
+  border: 1px solid #eee;
+  border-radius: 16px;
+  padding: 20px;
   cursor: pointer;
   transition: box-shadow 0.15s;
 }
 
 .feedback-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
 }
 
-.card-header {
+.card-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.card-top-left {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 4px;
-  flex-wrap: wrap;
 }
 
 .subject-tag {
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 12px;
   font-weight: 700;
   color: #fff;
 }
 
-.tag-ENG { background: #4caf50; }
-.tag-MATH { background: #2196f3; }
-.tag-KOR { background: #ff9800; }
+.tag-ENG { background: #43a047; }
+.tag-MATH { background: #1e88e5; }
+.tag-KOR { background: #fb8c00; }
 .tag-ETC { background: #9e9e9e; }
 
 .card-chapter {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: #333;
 }
 
 .card-date {
-  margin-left: auto;
-  font-size: 12px;
-  color: #aaa;
+  font-size: 13px;
+  color: #bbb;
+  flex-shrink: 0;
+}
+
+.card-subtitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 6px 0 0;
 }
 
 .card-content {
-  font-size: 13px;
-  color: #555;
-  line-height: 1.6;
-  margin: 8px 0 0;
+  font-size: 14px;
+  color: #666;
+  line-height: 1.7;
+  margin: 10px 0 0;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
@@ -752,14 +772,14 @@ onMounted(() => loadData())
 
 /* 주간 그리드 (dot 스타일) */
 .weekly-section {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .weekly-row-header {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  color: #999;
-  margin: 12px 0 6px;
+  color: #aaa;
+  margin: 14px 0 8px;
 }
 
 .weekly-row-header:first-child {
@@ -776,10 +796,10 @@ onMounted(() => loadData())
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 12px 4px;
-  border-radius: 12px;
-  background: #f8f8f8;
+  gap: 6px;
+  padding: 14px 4px;
+  border-radius: 14px;
+  background: #f5f5f5;
   transition: all 0.15s;
 }
 
@@ -788,15 +808,15 @@ onMounted(() => loadData())
 }
 
 .week-cell-box.clickable:hover {
-  background: #f0f0f0;
+  background: #ebebeb;
 }
 
 .week-cell-box.week-box-has {
-  background: #e8f5e9;
+  background: #4AF38A;
 }
 
 .week-cell-box.week-box-selected {
-  background: #333;
+  background: #222;
 }
 
 .week-cell-box.week-box-selected .week-box-label {
@@ -804,17 +824,17 @@ onMounted(() => loadData())
 }
 
 .week-box-label {
-  font-size: 12px;
+  font-size: 13px;
   color: #555;
   font-weight: 600;
   text-align: center;
 }
 
 .week-box-dot {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: #66bb6a;
+  background: #1a1a1a;
 }
 
 .week-cell-box.week-box-selected .week-box-dot {
@@ -826,17 +846,17 @@ onMounted(() => loadData())
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 8px;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .month-cell {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 12px 8px;
-  border-radius: 12px;
-  background: #f8f8f8;
+  gap: 6px;
+  padding: 14px 8px;
+  border-radius: 14px;
+  background: #f5f5f5;
   transition: all 0.15s;
   position: relative;
 }
@@ -846,15 +866,15 @@ onMounted(() => loadData())
 }
 
 .month-cell.clickable:hover {
-  background: #f0f0f0;
+  background: #ebebeb;
 }
 
 .month-cell.month-has-feedback {
-  background: #e8f5e9;
+  background: #4AF38A;
 }
 
 .month-cell.month-selected {
-  background: #333;
+  background: #222;
 }
 
 .month-cell.month-selected .month-label {
@@ -862,16 +882,16 @@ onMounted(() => loadData())
 }
 
 .month-label {
-  font-size: 13px;
+  font-size: 14px;
   color: #555;
   font-weight: 600;
 }
 
 .month-dot {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: #66bb6a;
+  background: #1a1a1a;
 }
 
 .month-cell.month-selected .month-dot {
@@ -881,14 +901,14 @@ onMounted(() => loadData())
 /* 주간/월간 피드백 상세 (공용) */
 .monthly-detail {
   background: #f8f9fa;
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 20px;
   cursor: pointer;
   transition: box-shadow 0.15s;
 }
 
 .monthly-detail:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
 }
 
 .monthly-detail-header {
@@ -899,20 +919,20 @@ onMounted(() => loadData())
 }
 
 .monthly-detail-title {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
-  color: #333;
+  color: #1a1a1a;
 }
 
 .monthly-detail-date {
-  font-size: 12px;
-  color: #aaa;
+  font-size: 13px;
+  color: #bbb;
 }
 
 .monthly-detail-content {
   font-size: 14px;
   color: #555;
-  line-height: 1.7;
+  line-height: 1.8;
   margin: 0;
   white-space: pre-wrap;
 }
