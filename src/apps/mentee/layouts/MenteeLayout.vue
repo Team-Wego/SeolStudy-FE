@@ -11,7 +11,7 @@
         >
           목표
         </button>
-        <Bell :size="22" color="#333" :stroke-width="1.8" />
+        <NotificationDropdown />
       </div>
     </header>
 
@@ -64,7 +64,8 @@ import { useChatStore } from '@/stores/chatStore'
 import { getMenteeRooms, getUnreadCount } from '@/api/chat/chatApi'
 
 const POLL_INTERVAL = 5000 // 5초마다 폴링
-import { Home, Calendar, MessageSquareText, MessagesSquare, User, Bell } from 'lucide-vue-next'
+import { Home, Calendar, MessageSquareText, MessagesSquare, User } from 'lucide-vue-next'
+import NotificationDropdown from '@/components/NotificationDropdown.vue'
 
 
 const tabs = [

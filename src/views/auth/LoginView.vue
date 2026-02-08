@@ -62,7 +62,7 @@ import { useRouter } from 'vue-router'
 import { Mail, Lock } from 'lucide-vue-next'
 import { login } from '@/api/auth/authApi'
 import { setCookie } from '@/utils/cookie'
-import { requestNotificationPermission } from '@/utils/firebase'
+// import { requestNotificationPermission } from '@/utils/firebase'
 
 const router = useRouter()
 const formRef = ref(null)
@@ -95,9 +95,6 @@ async function handleLogin() {
     setCookie('memberId', data.id)
     setCookie('memberRole', data.role)
     setCookie('memberName', data.name)
-
-    // 알림 권한 요청 (완료 후 페이지 이동, 실패해도 진행)
-    await requestNotificationPermission(data.id)
 
     if (data.role === 'MENTOR') {
       router.push('/mentor/dashboard')
