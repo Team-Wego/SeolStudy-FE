@@ -76,12 +76,10 @@
         >
           <div class="card-top-row">
             <div class="card-top-left">
-              <span v-if="fb.subject" class="subject-tag" :class="'tag-' + fb.subject">
-                {{ subjectLabel(fb.subject) }}
-              </span>
-              <span class="card-chapter">{{ fb.taskTitle || (activeTab === 'planner' ? '플래너 피드백' : '일간 피드백') }}</span>
+              <SubjectTag v-if="subjectTagMap[fb.subject]" :subject="subjectTagMap[fb.subject]" size="sm" />
+              <span class="card-goal">{{ fb.goalName || (activeTab === 'planner' ? '플래너 피드백' : '일간 피드백') }}</span>
             </div>
-            <span class="card-date">{{ fb.targetDate ? formatTargetDate(fb.targetDate) : formatDate(fb.createdAt) }}</span>
+            <span class="card-date">{{ formatDate(fb.createdAt) }}</span>
           </div>
           <div v-if="fb.taskTitle" class="card-subtitle">{{ fb.taskTitle }}</div>
           <p class="card-content">{{ fb.content }}</p>
@@ -191,9 +189,9 @@
           class="feedback-card"
           @click="goToDetail(fb.feedbackId)"
         >
-          <div class="card-header">
-            <span class="card-chapter">플래너 피드백</span>
-            <span class="card-date">{{ fb.targetDate ? formatTargetDate(fb.targetDate) : formatDate(fb.createdAt) }}</span>
+          <div class="card-top-row">
+            <span class="card-goal">플래너 피드백</span>
+            <span class="card-date">{{ formatDate(fb.createdAt) }}</span>
           </div>
           <p class="card-content">{{ fb.content }}</p>
         </div>
@@ -206,6 +204,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import SubjectTag from '@/components/common/SubjectTag.vue'
 import { getCookie } from '@/utils/cookie'
 import { getFeedbacks, getDailyFeedbackCount } from '@/api/feedback/feedbackApi'
 
@@ -234,6 +233,8 @@ function subjectLabel(s) {
   const map = { KOR: '국어', ENG: '영어', MATH: '수학', ETC: '기타' }
   return map[s] || s
 }
+
+const subjectTagMap = { ENG: 'english', MATH: 'math', KOR: 'korean' }
 
 // ── 날짜 상태 ──
 const today = new Date()
@@ -265,12 +266,6 @@ function formatDate(dateStr) {
   if (!dateStr) return ''
   const d = new Date(dateStr)
   return `${d.getFullYear()}. ${String(d.getMonth() + 1).padStart(2, '0')}. ${String(d.getDate()).padStart(2, '0')}`
-}
-
-function formatTargetDate(dateStr) {
-  if (!dateStr) return ''
-  const parts = dateStr.split('-')
-  return `${parts[0]}. ${parts[1]}. ${parts[2]}`
 }
 
 function getMonday(d) {
@@ -621,9 +616,9 @@ onMounted(() => loadData())
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   cursor: pointer;
-  padding: 8px 0;
+  padding: 8px 4px;
   border-radius: 12px;
   transition: background 0.15s;
 }
@@ -633,39 +628,43 @@ onMounted(() => loadData())
 }
 
 .week-day-label {
-  font-size: 13px;
+  font-size: 11px;
   color: #aaa;
   font-weight: 500;
 }
 
 .week-day-num {
-  font-size: 18px;
+  font-size: 13px;
   font-weight: 700;
+  color: #1a1a1a;
+}
+
+.week-cell.selected .week-day-num {
   color: #1a1a1a;
 }
 
 /* 카운트 뱃지 */
 .count-badge {
-  min-width: 40px;
-  height: 26px;
+  width: 100%;
+  aspect-ratio: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 14px;
+  border-radius: 10px;
   background: #4AF38A;
   color: #1a1a1a;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
 }
 
 .count-badge.empty {
   background: #f0f0f0;
-  min-width: 40px;
+  aspect-ratio: 1;
 }
 
 .count-badge.badge-active {
-  background: #3ad67a;
-  color: #fff;
+  background: #4AF38A;
+  color: #1a1a1a;
 }
 
 /* 과목 필터 */
@@ -677,21 +676,21 @@ onMounted(() => loadData())
 }
 
 .filter-chip {
-  padding: 8px 20px;
-  border-radius: 24px;
-  border: 1.5px solid #ddd;
-  background: #fff;
-  font-size: 14px;
+  padding: 5px 12px;
+  border-radius: 18px;
+  border: 1px solid #e0e0e0;
+  background: #f0f0f0;
+  font-size: 12px;
   font-weight: 600;
-  color: #aaa;
+  color: #999;
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .filter-chip.active {
-  background: #42a5f5;
+  background: #5bb8f6;
   color: #fff;
-  border-color: #42a5f5;
+  border-color: #5bb8f6;
 }
 
 /* 피드백 카드 */
@@ -727,23 +726,10 @@ onMounted(() => loadData())
   gap: 8px;
 }
 
-.subject-tag {
-  padding: 3px 10px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #fff;
-}
-
-.tag-ENG { background: #43a047; }
-.tag-MATH { background: #1e88e5; }
-.tag-KOR { background: #fb8c00; }
-.tag-ETC { background: #9e9e9e; }
-
-.card-chapter {
-  font-size: 14px;
-  font-weight: 600;
-  color: #333;
+.card-goal {
+  font-size: 13px;
+  font-weight: 500;
+  color: #aaa;
 }
 
 .card-date {
@@ -760,7 +746,7 @@ onMounted(() => loadData())
 }
 
 .card-content {
-  font-size: 14px;
+  font-size: 15.5px;
   color: #666;
   line-height: 1.7;
   margin: 10px 0 0;
