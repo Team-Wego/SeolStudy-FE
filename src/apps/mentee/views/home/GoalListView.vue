@@ -21,11 +21,30 @@
       </div>
 
       <!-- 목표 아이템들 -->
-      <div v-for="goal in goals" :key="goal.goalId" class="flex items-center bg-white rounded-2xl"
+      <div v-for="goal in goals" :key="goal.goalId" class="relative flex items-center bg-white rounded-2xl"
         style="padding: 18px 16px; margin-bottom: 10px;">
         <SubjectTag :subject="subjectMap[goal.subject] || 'korean'" size="sm" />
         <span class="flex-1 font-medium" style="font-size: 14px; margin-left: 12px;">{{ goal.name }}</span>
-        <MoreVertical :size="18" color="#C7C7CC" />
+        <button @click.stop="toggleMenu(goal.goalId)">
+          <MoreVertical :size="18" color="#C7C7CC" />
+        </button>
+
+        <!-- 케밥 메뉴 팝업 -->
+        <div v-if="openMenuId === goal.goalId"
+          class="absolute right-4 bg-white rounded-xl shadow-lg border border-[#E5E5EA] z-20"
+          style="top: 48px; min-width: 100px;">
+          <button class="w-full text-left text-sm hover:bg-[#F5F5F5]"
+            style="padding: 12px 16px;"
+            @click="startEdit(goal)">
+            수정
+          </button>
+          <div class="border-t border-[#E5E5EA]" />
+          <button class="w-full text-left text-sm text-[#E9412E] hover:bg-[#F5F5F5]"
+            style="padding: 12px 16px;"
+            @click="confirmDelete(goal)">
+            삭제
+          </button>
+        </div>
       </div>
 
       <!-- 빈 상태 -->
@@ -84,6 +103,77 @@
         </div>
       </div>
     </Transition>
+
+    <!-- 목표 수정 모달 -->
+    <Transition name="overlay">
+      <div v-if="showEditModal" class="fixed inset-0 z-40 bg-black/50" @click="closeEditModal" />
+    </Transition>
+    <Transition name="modal">
+      <div v-if="showEditModal" class="fixed z-50 bg-white rounded-2xl shadow-xl"
+        style="top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 28px 24px; width: calc(100% - 80px); max-width: 320px;">
+        <h2 class="font-bold" style="font-size: 16px; margin-bottom: 20px;">목표 수정</h2>
+
+        <!-- 과목 -->
+        <p class="font-semibold" style="font-size: 13px; margin-bottom: 10px;">과목</p>
+        <div class="flex gap-2" style="margin-bottom: 20px;">
+          <button v-for="subj in subjects" :key="subj.value" class="font-medium transition-colors" :class="editForm.subject === subj.value
+            ? 'bg-[#0CA5FE] text-white'
+            : 'bg-white text-[#8E8E93] border border-[#E5E5EA]'"
+            :style="{ padding: '8px 16px', borderRadius: '20px', fontSize: '13px' }"
+            @click="editForm.subject = subj.value">
+            {{ subj.label }}
+          </button>
+        </div>
+
+        <!-- 목표 내용 -->
+        <p class="font-semibold" style="font-size: 13px; margin-bottom: 10px;">목표 내용</p>
+        <input v-model="editForm.name" type="text" placeholder="어떤 목표를 이룰까요?"
+          class="w-full outline-none border border-[#E5E5EA] text-sm"
+          style="padding: 12px 14px; border-radius: 12px; font-size: 14px; margin-bottom: 24px;" />
+
+        <!-- 버튼 -->
+        <div class="flex gap-3">
+          <button class="flex-1 font-medium border border-[#E5E5EA] text-[#8E8E93]"
+            style="padding: 12px; border-radius: 12px; font-size: 14px;" @click="closeEditModal">
+            취소
+          </button>
+          <button class="flex-1 font-bold text-white transition-colors"
+            :class="isEditValid ? 'bg-[#222]' : 'bg-[#D1D1D6] cursor-not-allowed'"
+            :disabled="!isEditValid || submitting" style="padding: 12px; border-radius: 12px; font-size: 14px;"
+            @click="handleUpdate">
+            저장
+          </button>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- 삭제 확인 모달 -->
+    <Transition name="overlay">
+      <div v-if="showDeleteModal" class="fixed inset-0 z-40 bg-black/50" @click="closeDeleteModal" />
+    </Transition>
+    <Transition name="modal">
+      <div v-if="showDeleteModal" class="fixed z-50 bg-white rounded-2xl shadow-xl"
+        style="top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 28px 24px; width: calc(100% - 80px); max-width: 320px;">
+        <h2 class="font-bold" style="font-size: 16px; margin-bottom: 12px;">목표 삭제</h2>
+        <p class="text-[#8E8E93]" style="font-size: 14px; margin-bottom: 24px;">
+          '{{ deleteTarget?.name }}'을(를) 삭제하시겠습니까?
+        </p>
+        <div class="flex gap-3">
+          <button class="flex-1 font-medium border border-[#E5E5EA] text-[#8E8E93]"
+            style="padding: 12px; border-radius: 12px; font-size: 14px;" @click="closeDeleteModal">
+            취소
+          </button>
+          <button class="flex-1 font-bold text-white bg-[#E9412E] transition-colors"
+            :disabled="submitting" style="padding: 12px; border-radius: 12px; font-size: 14px;"
+            @click="handleDelete">
+            삭제
+          </button>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- 메뉴 바깥 클릭 감지 -->
+    <div v-if="openMenuId !== null" class="fixed inset-0 z-10" @click="openMenuId = null" />
   </div>
 </template>
 
@@ -92,14 +182,19 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { ChevronLeft, Plus, MoreVertical } from 'lucide-vue-next'
 import SubjectTag from '@/components/common/SubjectTag.vue'
 import { getCookie } from '@/utils/cookie'
-import { getGoals, createGoal } from '@/api/mentoring/goalApi'
+import { getGoals, createGoal, updateGoal, deleteGoal } from '@/api/mentoring/goalApi'
 import { getMember } from '@/api/member/memberApi'
 
 const goals = ref([])
 const member = ref(null)
 const loading = ref(true)
 const showModal = ref(false)
+const showEditModal = ref(false)
+const showDeleteModal = ref(false)
 const submitting = ref(false)
+const openMenuId = ref(null)
+const editTarget = ref(null)
+const deleteTarget = ref(null)
 
 const subjects = [
   { label: '국어', value: 'korean' },
@@ -124,7 +219,13 @@ const modalForm = reactive({
   subject: null,
 })
 
+const editForm = reactive({
+  name: '',
+  subject: null,
+})
+
 const isModalValid = computed(() => modalForm.name.trim() && modalForm.subject)
+const isEditValid = computed(() => editForm.name.trim() && editForm.subject)
 
 // 학년 기반 수능 D-day 계산
 const dDay = computed(() => {
@@ -196,6 +297,71 @@ async function handleCreate() {
   } catch (e) {
     console.error('목표 등록 실패:', e)
     alert('목표 등록에 실패했습니다.')
+  } finally {
+    submitting.value = false
+  }
+}
+
+// 케밥 메뉴
+function toggleMenu(goalId) {
+  openMenuId.value = openMenuId.value === goalId ? null : goalId
+}
+
+// 수정
+function startEdit(goal) {
+  openMenuId.value = null
+  editTarget.value = goal
+  editForm.name = goal.name
+  editForm.subject = subjectMap[goal.subject] || 'korean'
+  showEditModal.value = true
+}
+
+function closeEditModal() {
+  showEditModal.value = false
+  editTarget.value = null
+  editForm.name = ''
+  editForm.subject = null
+}
+
+async function handleUpdate() {
+  if (!isEditValid.value || submitting.value) return
+
+  submitting.value = true
+  try {
+    await updateGoal(editTarget.value.goalId, editForm.name.trim(), subjectToEnum[editForm.subject])
+    closeEditModal()
+    await fetchGoals()
+  } catch (e) {
+    console.error('목표 수정 실패:', e)
+    alert('목표 수정에 실패했습니다.')
+  } finally {
+    submitting.value = false
+  }
+}
+
+// 삭제
+function confirmDelete(goal) {
+  openMenuId.value = null
+  deleteTarget.value = goal
+  showDeleteModal.value = true
+}
+
+function closeDeleteModal() {
+  showDeleteModal.value = false
+  deleteTarget.value = null
+}
+
+async function handleDelete() {
+  if (submitting.value) return
+
+  submitting.value = true
+  try {
+    await deleteGoal(deleteTarget.value.goalId)
+    closeDeleteModal()
+    await fetchGoals()
+  } catch (e) {
+    console.error('목표 삭제 실패:', e)
+    alert('목표 삭제에 실패했습니다.')
   } finally {
     submitting.value = false
   }
