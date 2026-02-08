@@ -4,7 +4,14 @@
     <h1 class="page-title">마이페이지</h1>
 
     <!-- Profile Section -->
-    <div class="profile-section">
+    <div v-if="profileLoading" class="profile-section">
+      <div class="skeleton skeleton-avatar" />
+      <div class="profile-info">
+        <div class="skeleton skeleton-text" style="width: 120px; height: 20px;" />
+        <div class="skeleton skeleton-text" style="width: 80px; height: 14px;" />
+      </div>
+    </div>
+    <div v-else class="profile-section">
       <div class="profile-avatar">
         <img v-if="member.profileUrl" :src="member.profileUrl" alt="프로필" class="avatar-img" />
         <div v-else class="avatar-placeholder">
@@ -40,8 +47,33 @@
         </div>
       </div>
 
+      <!-- Skeleton Chart -->
+      <div v-if="reportLoading" class="chart-card">
+        <div class="skeleton skeleton-text" style="width: 80px; height: 36px; margin-bottom: 4px;" />
+        <div class="skeleton skeleton-text" style="width: 120px; height: 14px; margin-bottom: 20px;" />
+        <div v-if="viewMode === 'weekly'" class="bar-chart">
+          <div v-for="i in 7" :key="i" class="bar-col">
+            <div class="bar-track">
+              <div class="skeleton" style="width: 100%; height: 40%; border-radius: 8px;" />
+            </div>
+            <div class="skeleton skeleton-text" style="width: 20px; height: 12px; margin-top: 8px;" />
+          </div>
+        </div>
+        <div v-else style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; gap: 8px;">
+            <div v-for="i in 7" :key="i" class="skeleton" style="flex: 1; aspect-ratio: 1.6/1; border-radius: 10px;" />
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <div v-for="i in 7" :key="i" class="skeleton" style="flex: 1; aspect-ratio: 1.6/1; border-radius: 10px;" />
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <div v-for="i in 7" :key="i" class="skeleton" style="flex: 1; aspect-ratio: 1.6/1; border-radius: 10px;" />
+          </div>
+        </div>
+      </div>
+
       <!-- Weekly Chart -->
-      <div v-if="viewMode === 'weekly'" class="chart-card">
+      <div v-else-if="viewMode === 'weekly'" class="chart-card">
         <div class="chart-rate">
           <span class="rate-number">{{ studyStatus.achievementRate ?? 0 }}</span>
           <span class="rate-percent">%</span>
@@ -80,7 +112,18 @@
     <!-- Subject Status Section -->
     <div class="subject-section">
       <h2 class="section-title">과목별 현황</h2>
-      <div class="subject-list">
+      <div v-if="reportLoading" class="subject-list">
+        <div v-for="i in 3" :key="i" class="subject-card">
+          <div class="subject-card-left">
+            <div class="skeleton skeleton-text" style="width: 50px; height: 18px;" />
+            <div class="skeleton skeleton-text" style="width: 130px; height: 13px;" />
+          </div>
+          <div class="subject-card-right">
+            <div class="skeleton" style="width: 52px; height: 30px; border-radius: 50px;" />
+          </div>
+        </div>
+      </div>
+      <div v-else class="subject-list">
         <div v-for="subject in subjectList" :key="subject.subject" class="subject-card clickable"
           @click="goToSubject(subject.subject)">
           <div class="subject-card-left">
@@ -182,6 +225,8 @@ const studyStatus = ref({})
 const weeklyTaskMap = ref({})
 const monthlyTaskMap = ref({})
 const showLogoutModal = ref(false)
+const profileLoading = ref(true)
+const reportLoading = ref(true)
 
 const dayLabels = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
 
@@ -332,17 +377,21 @@ function handleLogout() {
 
 async function fetchMember() {
   try {
+    profileLoading.value = true
     const memberId = getCookie('memberId')
     if (!memberId) return
     const res = await getMember(memberId)
     member.value = res.data
   } catch (e) {
     console.error('Failed to fetch member:', e)
+  } finally {
+    profileLoading.value = false
   }
 }
 
 async function fetchStudyStatus() {
   try {
+    reportLoading.value = true
     const memberId = getCookie('memberId');
 
     if (!memberId) return;
@@ -366,6 +415,8 @@ async function fetchStudyStatus() {
     studyStatus.value = res.data;
   } catch (e) {
     console.error('Failed to fetch study status:', e);
+  } finally {
+    reportLoading.value = false
   }
 }
 
@@ -903,5 +954,37 @@ onMounted(() => {
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
+}
+
+/* Skeleton Loading */
+.skeleton {
+  background: #E8E8E8;
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.5) 50%, transparent 100%);
+  animation: skeleton-shimmer 1.5s infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.skeleton-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.skeleton-text {
+  border-radius: 6px;
 }
 </style>

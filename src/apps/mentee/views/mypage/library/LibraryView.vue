@@ -26,8 +26,22 @@
       </button>
     </div>
 
+    <!-- Skeleton Loading -->
+    <div v-if="loading" class="file-list">
+      <div v-for="i in 4" :key="i" class="file-row">
+        <div class="skeleton" style="width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;" />
+        <div class="file-card">
+          <div class="file-info">
+            <div class="skeleton skeleton-text" style="width: 160px; height: 14px;" />
+            <div class="skeleton skeleton-text" style="width: 100px; height: 10px;" />
+          </div>
+          <div class="skeleton" style="width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0;" />
+        </div>
+      </div>
+    </div>
+
     <!-- File List -->
-    <div class="file-list">
+    <div v-else class="file-list">
       <div v-for="file in fileList" :key="file.worksheetId" class="file-row">
         <button class="file-checkbox" :class="{ checked: selectedFiles.includes(file.worksheetId) }"
           @click="toggleFile(file.worksheetId)">
@@ -46,11 +60,11 @@
           </button>
         </div>
       </div>
-    </div>
 
-    <!-- Empty State -->
-    <div v-if="!loading && fileList.length === 0" class="empty-state">
-      <p>학습 자료가 없습니다.</p>
+      <!-- Empty State -->
+      <div v-if="fileList.length === 0" class="empty-state">
+        <p>학습 자료가 없습니다.</p>
+      </div>
     </div>
 
     <!-- Download CTA Button -->
@@ -376,5 +390,30 @@ onMounted(() => {
 
 .cta-btn:hover {
   background: #0B94E5;
+}
+
+/* Skeleton Loading */
+.skeleton {
+  background: #E8E8E8;
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.5) 50%, transparent 100%);
+  animation: skeleton-shimmer 1.5s infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.skeleton-text {
+  border-radius: 6px;
 }
 </style>

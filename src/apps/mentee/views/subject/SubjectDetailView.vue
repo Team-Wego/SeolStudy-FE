@@ -9,29 +9,50 @@
       <div class="header-spacer" />
     </div>
 
-    <!-- Task Count -->
-    <div class="task-summary">
-      <span>{{ periodLabel }} 필수 과제 목록</span>
-      <span class="task-count">{{ taskList.length }}개</span>
-    </div>
-
-    <!-- Task List -->
-    <div class="task-list">
-      <div v-for="task in taskList" :key="task.id" class="task-card">
-        <div class="task-card-left">
-          <div class="task-info">
-            <span class="task-title">{{ task.title }}</span>
-            <span class="task-date">{{ formatTaskDate(task.date) }}</span>
-          </div>
-        </div>
-        <StatusBadge :type="task.isChecked ? 'complete' : 'incomplete'" size="md" />
+    <!-- Skeleton Loading -->
+    <template v-if="loading">
+      <div class="task-summary">
+        <div class="skeleton skeleton-text" style="width: 160px; height: 18px;" />
       </div>
-    </div>
+      <div class="task-list">
+        <div v-for="i in 4" :key="i" class="task-card">
+          <div class="task-card-left">
+            <div class="task-info">
+              <div class="skeleton skeleton-text" style="width: 140px; height: 14px;" />
+              <div class="skeleton skeleton-text" style="width: 90px; height: 14px;" />
+            </div>
+          </div>
+          <div class="skeleton" style="width: 60px; height: 28px; border-radius: 50px;" />
+        </div>
+      </div>
+    </template>
 
-    <!-- Empty State -->
-    <div v-if="!loading && taskList.length === 0" class="empty-state">
-      <p>이번 주 과제가 없습니다.</p>
-    </div>
+    <!-- Actual Content -->
+    <template v-else>
+      <!-- Task Count -->
+      <div class="task-summary">
+        <span>{{ periodLabel }} 필수 과제 목록</span>
+        <span class="task-count">{{ taskList.length }}개</span>
+      </div>
+
+      <!-- Task List -->
+      <div class="task-list">
+        <div v-for="task in taskList" :key="task.id" class="task-card">
+          <div class="task-card-left">
+            <div class="task-info">
+              <span class="task-title">{{ task.title }}</span>
+              <span class="task-date">{{ formatTaskDate(task.date) }}</span>
+            </div>
+          </div>
+          <StatusBadge :type="task.isChecked ? 'complete' : 'incomplete'" size="md" />
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div v-if="taskList.length === 0" class="empty-state">
+        <p>과제가 없습니다.</p>
+      </div>
+    </template>
   </div>
 </template>
 
@@ -218,5 +239,30 @@ onMounted(() => {
   padding: 40px 0;
   color: #A6A6A6;
   font-size: 14px;
+}
+
+/* Skeleton Loading */
+.skeleton {
+  background: #E8E8E8;
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.5) 50%, transparent 100%);
+  animation: skeleton-shimmer 1.5s infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.skeleton-text {
+  border-radius: 6px;
 }
 </style>
