@@ -66,3 +66,15 @@ export function updateTaskStatus(menteeId, taskId, isChecked) {
         isChecked,
     });
 }
+
+export function createPlannerComment(menteeId, data) {
+    return api.post(`/mentees/${menteeId}/planner-comments`, data);
+}
+
+export function updatePlannerComment(menteeId, plannerId, data) {
+    return api.put(`/mentees/${menteeId}/planner-comments/${plannerId}`, data);
+}
+
+export function deletePlannerComment(menteeId, plannerId) {
+    return api.delete(`/mentees/${menteeId}/planner-comments/${plannerId}`);
+}

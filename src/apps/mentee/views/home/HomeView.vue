@@ -12,16 +12,45 @@
     </div>
 
     <!-- Mentor Comment Card -->
-    <div v-if="plannerComment" class="comment-card">
-      <span class="comment-badge">NEW 코멘트!</span>
-      <p class="comment-text" :class="{ expanded: commentExpanded }">
-        {{ plannerComment }}
-      </p>
-      <button v-if="!commentExpanded && plannerComment.length > 50" class="comment-more"
-        @click="commentExpanded = true">
-        더보기
-      </button>
+    <div class="comment-card">
+      <template v-if="plannerComment">
+        <span class="comment-badge">NEW 코멘트!</span>
+        <div class="comment-body">
+          <p ref="commentTextRef" class="comment-text" :class="{ expanded: commentExpanded }">
+            {{ plannerComment.comment }}
+          </p>
+          <button v-if="isCommentTruncated || commentExpanded" class="comment-more" @click="commentExpanded = !commentExpanded">
+            {{ commentExpanded ? '접기' : '더보기' }}
+          </button>
+        </div>
+        <button class="comment-edit-icon" @click="openCommentEdit">
+          <Edit3 :size="14" color="#8E8E93" />
+        </button>
+      </template>
+      <template v-else>
+        <button class="comment-add-btn" @click="openCommentCreate">
+          + 코멘트를 등록해보세요
+        </button>
+      </template>
     </div>
+
+    <!-- 코멘트 등록/수정 모달 오버레이 -->
+    <Transition name="overlay">
+      <div v-if="showCommentModal" class="menu-overlay" @click="closeCommentModal" />
+    </Transition>
+    <Transition name="popup">
+      <div v-if="showCommentModal" class="fab-menu comment-modal">
+        <h2 class="time-modal-title">{{ commentEditMode ? '코멘트 수정' : '코멘트 등록' }}</h2>
+        <textarea v-model="commentText" placeholder="오늘의 코멘트를 입력하세요" class="comment-textarea" />
+        <div class="time-modal-actions">
+          <button class="time-modal-cancel" @click="closeCommentModal">취소</button>
+          <button class="time-modal-submit" :class="{ disabled: !commentText.trim() || commentSubmitting }"
+            :disabled="!commentText.trim() || commentSubmitting" @click="handleCommentSubmit">
+            {{ commentSubmitting ? '저장 중...' : (commentEditMode ? '수정' : '등록') }}
+          </button>
+        </div>
+      </div>
+    </Transition>
 
     <!-- Toggle Row (한 줄 차지) -->
     <div class="toggle-row">
@@ -221,12 +250,12 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ChevronLeft, ChevronRight, ChevronsRight, ChevronsLeft, Plus, Check, Edit3, Clock } from 'lucide-vue-next'
 import SubjectTag from '@/components/common/SubjectTag.vue'
 import { getCookie } from '@/utils/cookie'
-import { getDailyTasks, getPlannerComment, getStudyTime, updateTaskStatus, createStudyTime, getDailyStudyTimes } from '@/api/task/taskApi'
+import { getDailyTasks, getPlannerComment, getStudyTime, updateTaskStatus, createStudyTime, getDailyStudyTimes, createPlannerComment, updatePlannerComment, deletePlannerComment } from '@/api/task/taskApi'
 import { format, addDays, getDay } from 'date-fns'
 
 const router = useRouter()
@@ -236,9 +265,11 @@ const loading = ref(true)
 const showTimetable = ref(true)
 const showMenu = ref(false)
 const commentExpanded = ref(false)
+const commentTextRef = ref(null)
+const isCommentTruncated = ref(false)
 
 const tasks = ref([])
-const plannerComment = ref('')
+const plannerComment = ref(null)
 const studyTimes = ref([])
 
 const dayNames = ['일', '월', '화', '수', '목', '금', '토']
@@ -458,12 +489,81 @@ async function fetchData() {
     ])
 
     tasks.value = tasksRes.data || []
-    plannerComment.value = commentRes?.data?.comment || ''
+    plannerComment.value = commentRes?.data || null
     studyTimes.value = studyTimeRes?.data?.studyTimes || []
+    await nextTick()
+    checkCommentTruncation()
   } catch (e) {
     console.error('Failed to fetch planner data:', e)
   } finally {
     loading.value = false
+  }
+}
+
+function checkCommentTruncation() {
+  const el = commentTextRef.value
+  if (el) {
+    isCommentTruncated.value = el.scrollHeight > el.clientHeight
+  } else {
+    isCommentTruncated.value = false
+  }
+}
+
+// ─── 코멘트 CRUD ───
+const showCommentModal = ref(false)
+const commentEditMode = ref(false)
+const commentText = ref('')
+const commentSubmitting = ref(false)
+
+function openCommentCreate() {
+  commentEditMode.value = false
+  commentText.value = ''
+  showCommentModal.value = true
+}
+
+function openCommentEdit() {
+  commentEditMode.value = true
+  commentText.value = plannerComment.value?.comment || ''
+  showCommentModal.value = true
+}
+
+function closeCommentModal() {
+  showCommentModal.value = false
+  commentText.value = ''
+}
+
+async function handleCommentSubmit() {
+  if (!commentText.value.trim() || commentSubmitting.value) return
+  const memberId = getCookie('memberId')
+  if (!memberId) return
+
+  commentSubmitting.value = true
+  try {
+    if (commentEditMode.value) {
+      await updatePlannerComment(Number(memberId), plannerComment.value.id, { comment: commentText.value.trim() })
+    } else {
+      await createPlannerComment(Number(memberId), { date: dateParam.value, comment: commentText.value.trim() })
+    }
+    closeCommentModal()
+    await fetchData()
+  } catch (e) {
+    console.error('코멘트 저장 실패:', e)
+  } finally {
+    commentSubmitting.value = false
+  }
+}
+
+async function handleDeleteComment() {
+  if (!plannerComment.value) return
+  const memberId = getCookie('memberId')
+  if (!memberId) return
+
+  try {
+    await deletePlannerComment(Number(memberId), plannerComment.value.id)
+    plannerComment.value = null
+    commentExpanded.value = false
+  } catch (e) {
+    console.error('코멘트 삭제 실패:', e)
   }
 }
 
@@ -543,6 +643,12 @@ onMounted(() => {
   -webkit-line-clamp: unset;
 }
 
+.comment-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
 .comment-more {
   background: none;
   border: none;
@@ -551,8 +657,76 @@ onMounted(() => {
   font-weight: 600;
   cursor: pointer;
   padding: 0;
-  float: right;
-  margin-top: 4px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.comment-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.comment-action-btn {
+  background: none;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.comment-action-btn.edit {
+  color: #0CA5FE;
+}
+
+.comment-action-btn.delete {
+  color: #FF3B30;
+}
+
+.comment-edit-icon {
+  position: absolute;
+  right: 16px;
+  bottom: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.comment-add-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #8E8E93;
+  padding: 4px 0;
+  width: 100%;
+  text-align: left;
+}
+
+.comment-modal {
+  padding: 24px !important;
+  width: 320px;
+}
+
+.comment-textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 12px;
+  border-radius: 12px;
+  border: none;
+  background: #F5F5F5;
+  font-size: 14px;
+  line-height: 1.6;
+  outline: none;
+  resize: none;
+  margin-bottom: 16px;
 }
 
 /* Planner Content */
@@ -615,8 +789,8 @@ onMounted(() => {
 }
 
 .task-checkbox.checked {
-  background: #4AF38A;
-  border-color: #4AF38A;
+  background: #0CA5FE;
+  border-color: #0CA5FE;
 }
 
 .task-info {
