@@ -29,9 +29,9 @@
 
     <!-- FAB 버튼 -->
     <button
-      class="fixed z-30 flex items-center justify-center rounded-full bg-[#E8E8E8] shadow-md transition-transform active:scale-95"
-      style="width: 36px; height: 36px; right: 20px; bottom: 110px;" @click="showMenu = !showMenu">
-      <Plus :size="16" color="#888" :stroke-width="2.5" />
+      class="fixed z-30 flex items-center justify-center rounded-full bg-[#0CA5FE] shadow-lg transition-transform active:scale-95"
+      style="width: 52px; height: 52px; right: 20px; bottom: 100px;" @click="showMenu = !showMenu">
+      <Plus :size="24" color="white" :stroke-width="2.5" />
     </button>
   </div>
 </template>

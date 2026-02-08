@@ -49,8 +49,8 @@
     <div v-if="viewMode === 'weekly'" class="shrink-0 grid grid-cols-7 text-center" style="padding: 0 20px 16px;">
       <div v-for="d in weekDates" :key="d.toISOString()" class="flex flex-col items-center">
         <button class="flex items-center justify-center rounded-full transition-colors" :style="{
-          width: '40px',
-          height: '40px',
+          width: '36px',
+          height: '36px',
           fontSize: '15px',
           fontWeight: filteredDate && isSameDate(d, filteredDate) ? '700' : '400',
           background: filteredDate && isSameDate(d, filteredDate) ? '#4AF38A'
@@ -114,13 +114,13 @@
 
     <!-- 할일 목록 -->
     <div class="flex-1 overflow-y-auto" style="padding: 0 20px 20px;">
-      <!-- 특정 날짜 필터 (dailyTasks — goalName 포함) -->
+      <!-- 특정 날짜 필터 (filteredDailyTasks — goalName 포함) -->
       <template v-if="filteredDate">
         <p class="font-semibold text-[#8E8E93]" style="font-size: 13px; margin-bottom: 8px;">
           {{ filteredDate.getMonth() + 1 }}월 {{ filteredDate.getDate() }}일 {{ korDayNames[filteredDate.getDay()] }}요일
         </p>
-        <div v-if="dailyTasks.length > 0" class="rounded-2xl" style="padding: 5px 15px; background: #F3F4F6;">
-          <div v-for="(task, idx) in dailyTasks" :key="task.id">
+        <div v-if="filteredDailyTasks.length > 0" class="rounded-2xl" style="padding: 5px 15px; background: #F3F4F6;">
+          <div v-for="(task, idx) in filteredDailyTasks" :key="task.id">
             <div class="flex items-center" style="padding: 16px 0;">
               <div class="flex-1 min-w-0">
                 <p class="font-semibold" style="font-size: 15px; margin-bottom: 6px;">{{ task.title }}</p>
@@ -140,7 +140,7 @@
                 {{ task.isChecked ? '완료' : '미완료' }}
               </span>
             </div>
-            <div v-if="idx < dailyTasks.length - 1" style="border-top: 1px solid #E5E5EA;" />
+            <div v-if="idx < filteredDailyTasks.length - 1" style="border-top: 1px solid #E5E5EA;" />
           </div>
         </div>
         <div v-else-if="!loading" class="flex flex-col items-center justify-center" style="padding-top: 80px;">
@@ -188,21 +188,30 @@
         </div>
       </template>
     </div>
+
+    <!-- FAB: 할 일 추가 -->
+    <button
+      class="fixed z-30 flex items-center justify-center rounded-full bg-[#0CA5FE] shadow-lg transition-transform active:scale-95"
+      style="width: 52px; height: 52px; right: 20px; bottom: 100px;" @click="goToCreateTask">
+      <Plus :size="24" color="white" :stroke-width="2.5" />
+    </button>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
-import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { useRouter } from 'vue-router'
+import { ChevronLeft, ChevronRight, Plus } from 'lucide-vue-next'
 import SubjectTag from '@/components/common/SubjectTag.vue'
 import { getCookie } from '@/utils/cookie'
-import { getDailyTasks, getWeeklyTasks } from '@/api/task/taskApi'
+import { getWeeklyTasks } from '@/api/task/taskApi'
+
+const router = useRouter()
 
 const viewMode = ref('weekly')
 const selectedDate = ref(new Date())
 const filteredDate = ref(null)
 const rangeTasks = ref([])
-const dailyTasks = ref([])
 const loading = ref(false)
 
 const subjectMap = {
@@ -274,14 +283,14 @@ const monthDates = computed(() => {
   return dates
 })
 
-// 현재 뷰 범위의 시작/끝 날짜
+// 현재 뷰 범위의 시작/끝 날짜 (문자열로 반환하여 불필요한 재호출 방지)
 const dateRange = computed(() => {
   if (viewMode.value === 'weekly') {
     const dates = weekDates.value
-    return { start: dates[0], end: dates[6] }
+    return { start: formatDate(dates[0]), end: formatDate(dates[6]) }
   } else {
     const dates = monthDates.value
-    return { start: dates[0], end: dates[dates.length - 1] }
+    return { start: formatDate(dates[0]), end: formatDate(dates[dates.length - 1]) }
   }
 })
 
@@ -297,6 +306,13 @@ const taskDateSet = computed(() => {
 function hasTaskOn(d) {
   return taskDateSet.value.has(formatDate(d))
 }
+
+// 선택된 날짜의 할일 (rangeTasks에서 클라이언트 필터링 — API 호출 없이 즉시 렌더링)
+const filteredDailyTasks = computed(() => {
+  if (!filteredDate.value) return []
+  const dateStr = formatDate(filteredDate.value)
+  return rangeTasks.value.filter(task => task.date === dateStr)
+})
 
 // 날짜별 그룹핑
 const groupedTasks = computed(() => {
@@ -372,7 +388,7 @@ async function fetchRangeTasks() {
   const menteeId = getCookie('memberId')
   const { start, end } = dateRange.value
   try {
-    const { data } = await getWeeklyTasks(Number(menteeId), formatDate(start), formatDate(end))
+    const { data } = await getWeeklyTasks(Number(menteeId), start, end)
     rangeTasks.value = data
   } catch (e) {
     console.error('범위 할일 조회 실패:', e)
@@ -381,12 +397,16 @@ async function fetchRangeTasks() {
 
 async function fetchDailyTasks() {
   if (!filteredDate.value) return
+  loading.value = true
+  filteredDailyTasks.value = []
   const menteeId = getCookie('memberId')
   try {
     const { data } = await getDailyTasks(Number(menteeId), formatDate(filteredDate.value))
-    dailyTasks.value = data
+    filteredDailyTasks.value = data
   } catch (e) {
     console.error('일별 할일 조회 실패:', e)
+  } finally {
+    loading.value = false
   }
 }
 
@@ -403,10 +423,15 @@ watch(filteredDate, () => {
   }
 })
 
-// 범위 변경 → range 재조회
-watch(dateRange, () => {
+// 범위 변경 → range 재조회 (문자열 비교로 같은 주/월이면 재호출 안 함)
+watch(() => `${dateRange.value.start}_${dateRange.value.end}`, () => {
   fetchRangeTasks()
 })
+
+function goToCreateTask() {
+  const date = filteredDate.value ? formatDate(filteredDate.value) : formatDate(new Date())
+  router.push({ path: '/mentee/tasks/create', query: { date } })
+}
 
 onMounted(() => {
   fetchAll()
