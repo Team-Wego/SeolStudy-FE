@@ -44,6 +44,9 @@
               </div>
               <span v-if="item.count > 1" class="noti-count">{{ item.count }}</span>
               <div v-if="item.hasUnread" class="noti-dot" />
+              <button class="noti-delete" @click.stop="handleDelete(item)" title="삭제">
+                <X :size="14" />
+              </button>
             </div>
             <div v-if="loading" class="dropdown-loading">불러오는 중...</div>
           </template>
@@ -55,14 +58,17 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { Bell, BellRing, MessageSquareText, ClipboardCheck, MessageCircle } from 'lucide-vue-next'
+import { useRouter } from 'vue-router'
+import { Bell, BellRing, MessageSquareText, ClipboardCheck, MessageCircle, X } from 'lucide-vue-next'
 import { getCookie } from '@/utils/cookie'
 import {
   getNotifications,
   getUnreadNotificationCount,
   markNotificationAsRead,
+  deleteNotification,
 } from '@/api/notification/notificationApi'
 
+const router = useRouter()
 const open = ref(false)
 const notifications = ref([])
 const unreadCount = ref(0)
@@ -84,7 +90,7 @@ async function fetchUnreadCount() {
   if (!memberId) return
   try {
     const { data } = await getUnreadNotificationCount(memberId)
-    unreadCount.value = data
+    unreadCount.value = data.count ?? data
   } catch (e) {
     console.error('[Notification] unread count 조회 실패:', e)
   }
@@ -115,7 +121,7 @@ async function fetchNotifications(page = 0) {
 // 채팅 알림을 roomId 기준으로 통합
 const groupedNotifications = computed(() => {
   const result = []
-  const chatGroups = new Map() // roomId → grouped item
+  const chatGroups = new Map()
 
   for (const noti of notifications.value) {
     if (noti.type === 'CHAT' && noti.data?.roomId) {
@@ -124,8 +130,7 @@ const groupedNotifications = computed(() => {
         const group = chatGroups.get(roomId)
         group.count++
         group.ids.push(noti.id)
-        if (!noti.isRead) group.hasUnread = true
-        // 가장 최신 시간 유지 (첫 번째가 가장 최신)
+        if (!noti.read) group.hasUnread = true
       } else {
         const group = {
           id: `chat-${roomId}`,
@@ -133,7 +138,7 @@ const groupedNotifications = computed(() => {
           title: noti.title,
           body: noti.body,
           createdAt: noti.createdAt,
-          hasUnread: !noti.isRead,
+          hasUnread: !noti.read,
           count: 1,
           ids: [noti.id],
           data: noti.data,
@@ -144,14 +149,13 @@ const groupedNotifications = computed(() => {
     } else {
       result.push({
         ...noti,
-        hasUnread: !noti.isRead,
+        hasUnread: !noti.read,
         count: 1,
         ids: [noti.id],
       })
     }
   }
 
-  // 통합된 채팅 알림 body 업데이트
   for (const group of chatGroups.values()) {
     if (group.count > 1) {
       group.body = `${group.count}개의 새 메시지`
@@ -171,28 +175,68 @@ function toggle() {
   }
 }
 
-// 알림 클릭 → 읽음 처리 (통합된 알림은 모든 하위 알림 읽음 처리)
+// 알림 타입별 이동 경로
+function getNavigationPath(item) {
+  const role = getCookie('memberRole')
+  const prefix = role === 'MENTOR' ? '/mentor' : '/mentee'
+
+  switch (item.type) {
+    case 'CHAT':
+      return `${prefix}/chat`
+    case 'TASK_REMINDER':
+      return `${prefix}/home`
+    case 'FEEDBACK':
+      return `${prefix}/feedback`
+    default:
+      return null
+  }
+}
+
+// 알림 클릭 → 읽음 처리 + 페이지 이동
 async function handleClick(item) {
-  if (!item.hasUnread) return
-
-  try {
-    // 통합된 알림의 읽지 않은 항목들 모두 읽음 처리
-    const unreadIds = item.ids.filter((id) => {
-      const noti = notifications.value.find((n) => n.id === id)
-      return noti && !noti.isRead
-    })
-
-    await Promise.all(unreadIds.map((id) => markNotificationAsRead(id)))
-
-    // 원본 데이터도 업데이트
-    for (const id of unreadIds) {
-      const noti = notifications.value.find((n) => n.id === id)
-      if (noti) noti.isRead = true
+  // 읽지 않은 항목 읽음 처리
+  if (item.hasUnread) {
+    try {
+      const unreadIds = item.ids.filter((id) => {
+        const noti = notifications.value.find((n) => n.id === id)
+        return noti && !noti.read
+      })
+      await Promise.all(unreadIds.map((id) => markNotificationAsRead(id)))
+      for (const id of unreadIds) {
+        const noti = notifications.value.find((n) => n.id === id)
+        if (noti) noti.read = true
+      }
+      unreadCount.value = Math.max(0, unreadCount.value - unreadIds.length)
+    } catch (e) {
+      console.error('[Notification] 읽음 처리 실패:', e)
     }
+  }
 
-    unreadCount.value = Math.max(0, unreadCount.value - unreadIds.length)
+  // 해당 페이지로 이동
+  const path = getNavigationPath(item)
+  if (path) {
+    open.value = false
+    router.push(path)
+  }
+}
+
+// 알림 삭제
+async function handleDelete(item) {
+  try {
+    // 통합된 알림은 모든 하위 알림 삭제
+    await Promise.all(item.ids.map((id) => deleteNotification(id)))
+
+    // 읽지 않은 알림 수 차감
+    const deletedUnreadCount = item.ids.filter((id) => {
+      const noti = notifications.value.find((n) => n.id === id)
+      return noti && !noti.read
+    }).length
+    unreadCount.value = Math.max(0, unreadCount.value - deletedUnreadCount)
+
+    // 원본 목록에서 제거
+    notifications.value = notifications.value.filter((n) => !item.ids.includes(n.id))
   } catch (e) {
-    console.error('[Notification] 읽음 처리 실패:', e)
+    console.error('[Notification] 삭제 실패:', e)
   }
 }
 
@@ -332,6 +376,7 @@ onUnmounted(() => {
   padding: 12px 16px;
   cursor: pointer;
   transition: background 0.15s;
+  position: relative;
 }
 
 .noti-item:hover {
@@ -409,6 +454,31 @@ onUnmounted(() => {
   border-radius: 50%;
   background: #0ca5fe;
   margin-top: 6px;
+}
+
+.noti-delete {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  color: #ccc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+  margin-top: 2px;
+}
+
+.noti-item:hover .noti-delete {
+  opacity: 1;
+}
+
+.noti-delete:hover {
+  color: #ff3b30;
+  background: rgba(255, 59, 48, 0.08);
 }
 
 /* 드롭다운 애니메이션 */

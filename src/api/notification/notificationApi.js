@@ -29,3 +29,8 @@ export const getUnreadNotificationCount = (memberId) => {
 export const markNotificationAsRead = (notificationId) => {
   return api.patch(`/notification/${notificationId}/read`)
 }
+
+// 알림 삭제
+export const deleteNotification = (notificationId) => {
+  return api.delete(`/notification/${notificationId}`)
+}
