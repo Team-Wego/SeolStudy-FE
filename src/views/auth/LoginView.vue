@@ -62,6 +62,7 @@ import { useRouter } from 'vue-router'
 import { Mail, Lock } from 'lucide-vue-next'
 import { login } from '@/api/auth/authApi'
 import { setCookie } from '@/utils/cookie'
+// import { requestNotificationPermission } from '@/utils/firebase'
 
 const router = useRouter()
 const formRef = ref(null)
