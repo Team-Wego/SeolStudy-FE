@@ -11,3 +11,15 @@ export function createGoal(menteeId, name, subject) {
     headers: { 'Content-Type': 'multipart/form-data' },
   })
 }
+
+export function updateGoal(goalId, name, subject) {
+  const formData = new FormData()
+  formData.append('request', new Blob([JSON.stringify({ name, subject, worksheetChanged: false })], { type: 'application/json' }))
+  return api.put(`/goals/${goalId}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}
+
+export function deleteGoal(goalId) {
+  return api.delete(`/goals/${goalId}`)
+}
