@@ -186,6 +186,9 @@ function getNavigationPath(item) {
     case 'TASK_REMINDER':
       return `${prefix}/home`
     case 'FEEDBACK':
+      if (item.data?.feedbackId) {
+        return `${prefix}/feedback/${item.data.feedbackId}`
+      }
       return `${prefix}/feedback`
     default:
       return null
