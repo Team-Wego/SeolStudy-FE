@@ -200,6 +200,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
+
 import { useRouter } from 'vue-router'
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-vue-next'
 import SubjectTag from '@/components/common/SubjectTag.vue'
@@ -395,33 +396,11 @@ async function fetchRangeTasks() {
   }
 }
 
-async function fetchDailyTasks() {
-  if (!filteredDate.value) return
-  loading.value = true
-  filteredDailyTasks.value = []
-  const menteeId = getCookie('memberId')
-  try {
-    const { data } = await getDailyTasks(Number(menteeId), formatDate(filteredDate.value))
-    filteredDailyTasks.value = data
-  } catch (e) {
-    console.error('일별 할일 조회 실패:', e)
-  } finally {
-    loading.value = false
-  }
-}
-
 async function fetchAll() {
   loading.value = true
-  await Promise.all([fetchRangeTasks(), fetchDailyTasks()])
+  await fetchRangeTasks()
   loading.value = false
 }
-
-// 필터 날짜 변경 → daily 재조회
-watch(filteredDate, () => {
-  if (filteredDate.value) {
-    fetchDailyTasks()
-  }
-})
 
 // 범위 변경 → range 재조회 (문자열 비교로 같은 주/월이면 재호출 안 함)
 watch(() => `${dateRange.value.start}_${dateRange.value.end}`, () => {
