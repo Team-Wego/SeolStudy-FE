@@ -30,7 +30,7 @@
           <div class="flex flex-col gap-8">
             <SubjectTag subject="english" size="sm" />
             <SubjectTag subject="math" size="sm" />
-            <SubjectTag subject="science" size="sm" />
+            <SubjectTag subject="korean" size="sm" />
           </div>
         </FigmaSection>
 
@@ -39,7 +39,7 @@
           <div class="flex flex-col gap-8">
             <SubjectTag subject="english" size="md" />
             <SubjectTag subject="math" size="md" />
-            <SubjectTag subject="science" size="md" />
+            <SubjectTag subject="korean" size="md" />
           </div>
         </FigmaSection>
 

@@ -1,5 +1,20 @@
 <template>
   <div class="flex flex-col h-dvh bg-white">
+    <!-- 상단 헤더 -->
+    <header class="shrink-0 flex items-center justify-between" style="padding: 12px 20px;">
+      <span class="font-bold" style="font-size: 16px;">SeolStudy</span>
+      <div class="flex items-center gap-3">
+        <button
+          class="border border-[#0CA5FE] text-[#0CA5FE] font-semibold rounded-full"
+          style="padding: 4px 14px; font-size: 12px;"
+          @click="$router.push('/mentee/goals')"
+        >
+          목표
+        </button>
+        <Bell :size="22" color="#333" :stroke-width="1.8" />
+      </div>
+    </header>
+
     <!-- 콘텐츠 영역 -->
     <main class="flex-1 overflow-y-auto" style="padding-bottom: 94px;">
       <RouterView />
@@ -37,7 +52,7 @@
 
 <script setup>
 import { RouterView, RouterLink, useRoute } from 'vue-router'
-import { Home, Calendar, MessageSquareText, MessagesSquare, User } from 'lucide-vue-next'
+import { Home, Calendar, MessageSquareText, MessagesSquare, User, Bell } from 'lucide-vue-next'
 
 const tabs = [
   { name: 'calendar', label: '캘린더', to: '/mentee/calendar', icon: Calendar },

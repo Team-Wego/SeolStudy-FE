@@ -17,6 +17,18 @@ const router = createRouter({
       component: () => import('@/views/ComponentTest.vue'),
     },
     menteeRoutes,
+    {
+      path: '/mentee/tasks/create',
+      name: 'TaskCreate',
+      component: () => import('@/apps/mentee/views/home/TaskCreateView.vue'),
+      meta: { transition: 'slide-left' },
+    },
+    {
+      path: '/mentee/goals',
+      name: 'GoalList',
+      component: () => import('@/apps/mentee/views/home/GoalListView.vue'),
+      meta: { transition: 'slide-left' },
+    },
     mentorRoutes,
     {
       path: '/',
@@ -25,7 +37,14 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach((to) => {
+router.beforeEach((to, from) => {
+  // 독립 페이지에서 나갈 때 slide-right 전환
+  const slidePages = ['TaskCreate', 'GoalList']
+  if (slidePages.includes(from.name) && to.meta.transition !== 'slide-left') {
+    from.meta.transition = 'slide-right'
+    to.meta.transition = 'slide-right'
+  }
+
   const memberId = getCookie('memberId')
 
   // 로그인 안 된 상태에서 로그인 외 페이지 접근 시

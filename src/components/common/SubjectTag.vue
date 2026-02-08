@@ -15,7 +15,7 @@ const props = defineProps({
   subject: {
     type: String,
     required: true,
-    validator: (v) => ['english', 'math', 'science'].includes(v),
+    validator: (v) => ['english', 'math', 'korean'].includes(v),
   },
   size: {
     type: String,
@@ -27,7 +27,7 @@ const props = defineProps({
 const config = {
   english: { label: '영어', bg: 'bg-[#E6F9F1]', text: 'text-[#14CB7F]' },
   math:    { label: '수학', bg: 'bg-[#F1EEFF]', text: 'text-[#7458FF]' },
-  science: { label: '과학', bg: 'bg-[#FDECEA]', text: 'text-[#E9412E]' },
+  korean: { label: '국어', bg: 'bg-[#FDECEA]', text: 'text-[#E9412E]' },
 }
 
 const sizeStyles = {
