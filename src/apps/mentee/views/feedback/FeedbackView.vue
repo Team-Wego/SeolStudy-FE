@@ -2,7 +2,7 @@
   <div class="feedback-page">
     <h1 class="page-title">피드백</h1>
 
-    <!-- 탭: 일간/주간/월간 -->
+    <!-- 탭: 일간/주간/월간/플래너 -->
     <div class="tab-group">
       <button
         v-for="t in tabs"
@@ -28,7 +28,6 @@
 
     <!-- ===== 일간 탭 ===== -->
     <template v-if="activeTab === 'daily'">
-      <!-- 주간 캘린더 -->
       <div class="week-grid">
         <div
           v-for="d in weekDays"
@@ -79,7 +78,7 @@
             <span v-if="fb.subject" class="subject-tag" :class="'tag-' + fb.subject">
               {{ subjectLabel(fb.subject) }}
             </span>
-            <span class="card-chapter">{{ fb.taskTitle || '플래너 피드백' }}</span>
+            <span class="card-chapter">{{ fb.taskTitle || '일간 피드백' }}</span>
             <span class="card-date">{{ formatDate(fb.createdAt) }}</span>
           </div>
           <p class="card-content">{{ fb.content }}</p>
@@ -93,25 +92,29 @@
         <div
           v-for="(w, idx) in quarterWeeks"
           :key="idx"
-          class="weekly-row"
+          class="week-cell-box clickable"
+          :class="{ 'week-box-selected': selectedWeekIdx === idx, 'week-box-has': w.hasFeedback }"
+          @click="selectWeek(idx)"
         >
-          <div class="weekly-label">{{ w.label }}</div>
-          <div
-            class="count-badge clickable"
-            :class="{ 'badge-active': selectedWeekIdx === idx }"
-            @click="selectWeek(idx)"
-          >
-            <template v-if="w.count > 0">{{ w.count }}개</template>
-          </div>
+          <span class="week-box-label">{{ w.label }}</span>
+          <span v-if="w.hasFeedback" class="week-box-dot" />
         </div>
       </div>
 
-      <!-- 주간 요약 -->
-      <div v-if="weeklyFeedback" class="summary-card">
-        <h3 class="summary-title">{{ weeklyFeedback.title }}</h3>
-        <p class="summary-content">{{ weeklyFeedback.content }}</p>
-      </div>
-      <div v-else-if="!loading" class="empty-text">주간 피드백이 없습니다</div>
+      <!-- 선택된 주의 WEEKLY 피드백 -->
+      <template v-if="selectedWeekIdx !== null">
+        <div v-if="!selectedWeeklyFeedback && !loading" class="empty-text">
+          해당 주에 주간 피드백이 없습니다
+        </div>
+        <div v-else-if="selectedWeeklyFeedback" class="monthly-detail" @click="goToDetail(selectedWeeklyFeedback.feedbackId)">
+          <div class="monthly-detail-header">
+            <span class="monthly-detail-title">{{ selectedWeeklyLabel }}</span>
+            <span class="monthly-detail-date">{{ selectedWeeklyDateRange }}</span>
+          </div>
+          <p class="monthly-detail-content">{{ selectedWeeklyFeedback.content }}</p>
+        </div>
+      </template>
+      <div v-else-if="!loading" class="empty-text">주를 선택하세요</div>
     </template>
 
     <!-- ===== 월간 탭 ===== -->
@@ -120,25 +123,73 @@
         <div
           v-for="(m, idx) in monthlyData"
           :key="idx"
-          class="month-cell"
+          class="month-cell clickable"
+          :class="{ 'month-selected': selectedMonthIdx === idx, 'month-has-feedback': m.hasFeedback }"
+          @click="selectMonth(idx)"
         >
-          <div class="month-label">{{ m.label }}</div>
-          <div
-            class="count-badge clickable"
-            :class="{ 'badge-active': selectedMonthIdx === idx }"
-            @click="selectMonth(idx)"
-          >
-            <template v-if="m.count > 0">{{ m.count }}개</template>
-          </div>
+          <span class="month-label">{{ m.label }}</span>
+          <span v-if="m.hasFeedback" class="month-dot" />
         </div>
       </div>
 
-      <!-- 월간 요약 -->
-      <div v-if="monthlyFeedback" class="summary-card">
-        <h3 class="summary-title">{{ monthlyFeedback.title }}</h3>
-        <p class="summary-content">{{ monthlyFeedback.content }}</p>
+      <!-- 선택된 월의 MONTHLY 피드백 내용 -->
+      <template v-if="selectedMonthIdx !== null">
+        <div v-if="!selectedMonthlyFeedback && !loading" class="empty-text">
+          해당 월에 월간 피드백이 없습니다
+        </div>
+        <div v-else-if="selectedMonthlyFeedback" class="monthly-detail" @click="goToDetail(selectedMonthlyFeedback.feedbackId)">
+          <div class="monthly-detail-header">
+            <span class="monthly-detail-title">{{ monthlyData[selectedMonthIdx].label }} 피드백</span>
+            <span class="monthly-detail-date">{{ formatDate(selectedMonthlyFeedback.createdAt) }}</span>
+          </div>
+          <p class="monthly-detail-content">{{ selectedMonthlyFeedback.content }}</p>
+        </div>
+      </template>
+      <div v-else-if="!loading" class="empty-text">월을 선택하세요</div>
+    </template>
+
+    <!-- ===== 플래너 탭 ===== -->
+    <template v-if="activeTab === 'planner'">
+      <div class="week-grid">
+        <div
+          v-for="d in weekDays"
+          :key="d.dateStr"
+          class="week-cell"
+          :class="{ selected: d.dateStr === selectedDate }"
+          @click="selectDate(d.dateStr)"
+        >
+          <span class="week-day-label">{{ d.dayLabel }}</span>
+          <span class="week-day-num">{{ d.day }}</span>
+          <div
+            v-if="plannerCounts[d.dateStr]"
+            class="count-badge"
+            :class="{ 'badge-active': d.dateStr === selectedDate }"
+          >
+            {{ plannerCounts[d.dateStr] }}개
+          </div>
+          <div v-else class="count-badge empty" />
+        </div>
       </div>
-      <div v-else-if="!loading" class="empty-text">월간 피드백이 없습니다</div>
+
+      <!-- 피드백 카드 목록 -->
+      <div v-if="loading" class="loading-text">불러오는 중...</div>
+      <div v-else-if="filteredPlannerFeedbacks.length === 0" class="empty-text">
+        해당 날짜에 플래너 피드백이 없습니다
+      </div>
+      <div v-else class="feedback-list">
+        <div
+          v-for="fb in filteredPlannerFeedbacks"
+          :key="fb.feedbackId"
+          class="feedback-card"
+          @click="goToDetail(fb.feedbackId)"
+        >
+          <div class="card-header">
+            <span class="card-chapter">플래너 피드백</span>
+            <span class="card-date">{{ formatDate(fb.createdAt) }}</span>
+          </div>
+          <p class="card-content">{{ fb.content }}</p>
+        </div>
+      </div>
     </template>
   </div>
 </template>
@@ -158,10 +209,11 @@ const tabs = [
   { label: '일간', value: 'daily' },
   { label: '주간', value: 'weekly' },
   { label: '월간', value: 'monthly' },
+  { label: '플래너', value: 'planner' },
 ]
 const activeTab = ref('daily')
 
-// ── 과목 필터 ──
+// ── 과목 필터 (일간 전용) ──
 const subjectFilters = [
   { label: '전체', value: 'ALL' },
   { label: '영어', value: 'ENG' },
@@ -177,12 +229,13 @@ function subjectLabel(s) {
 
 // ── 날짜 상태 ──
 const today = new Date()
-const currentDate = ref(new Date(today)) // 일간: 해당 주 기준
+const currentDate = ref(new Date(today))
 const currentYear = ref(today.getFullYear())
 const currentQuarter = ref(Math.floor(today.getMonth() / 3) + 1)
 
 // ── 데이터 ──
 const dailyCounts = ref({})
+const plannerCounts = ref({})
 const allFeedbacks = ref([])
 const selectedDate = ref(formatDateStr(today))
 const selectedWeekIdx = ref(null)
@@ -219,7 +272,7 @@ const DAY_LABELS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
 
 // ── 네비게이션 라벨 ──
 const navLabel = computed(() => {
-  if (activeTab.value === 'daily') {
+  if (activeTab.value === 'daily' || activeTab.value === 'planner') {
     const sel = new Date(selectedDate.value + 'T00:00:00')
     const y = sel.getFullYear()
     const m = sel.getMonth() + 1
@@ -236,7 +289,7 @@ const navLabel = computed(() => {
 
 // ── 네비게이션 ──
 function navigate(dir) {
-  if (activeTab.value === 'daily') {
+  if (activeTab.value === 'daily' || activeTab.value === 'planner') {
     const d = new Date(currentDate.value)
     d.setDate(d.getDate() + dir * 7)
     currentDate.value = d
@@ -258,9 +311,10 @@ function changeTab(tab) {
   activeTab.value = tab
   selectedWeekIdx.value = null
   selectedMonthIdx.value = null
+  allFeedbacks.value = []
 }
 
-// ── 일간: 주간 캘린더 데이터 ──
+// ── 일간/플래너 공용: 주간 캘린더 데이터 ──
 const weekDays = computed(() => {
   const mon = getMonday(currentDate.value)
   const days = []
@@ -280,18 +334,25 @@ function selectDate(dateStr) {
   selectedDate.value = dateStr
 }
 
-// 일간: 선택 날짜의 피드백 (과목 필터 적용)
+// ── 일간: 선택 날짜의 TASK 피드백 (과목 필터 적용) ──
 const filteredDailyFeedbacks = computed(() => {
   const dateMatch = allFeedbacks.value.filter((fb) => {
     if (fb.feedbackType !== 'TASK') return false
-    const fbDate = fb.createdAt?.substring(0, 10)
-    return fbDate === selectedDate.value
+    return fb.targetDate === selectedDate.value
   })
   if (selectedSubject.value === 'ALL') return dateMatch
   return dateMatch.filter((fb) => fb.subject === selectedSubject.value)
 })
 
-// ── 주간: 분기별 주 데이터 ──
+// ── 플래너: 선택 날짜의 PLANNER 피드백 ──
+const filteredPlannerFeedbacks = computed(() => {
+  return allFeedbacks.value.filter((fb) => {
+    if (fb.feedbackType !== 'PLANNER') return false
+    return fb.targetDate === selectedDate.value
+  })
+})
+
+// ── 주간: 분기별 주 데이터 (유무만 체크) ──
 const quarterWeeks = computed(() => {
   const qStart = new Date(currentYear.value, (currentQuarter.value - 1) * 3, 1)
   const qEnd = new Date(currentYear.value, currentQuarter.value * 3, 0)
@@ -301,72 +362,87 @@ const quarterWeeks = computed(() => {
   while (mon <= qEnd) {
     const sun = new Date(mon)
     sun.setDate(mon.getDate() + 6)
-    const label = `${mon.getMonth() + 1}. ${mon.getDate()}~`
-    let count = 0
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(mon)
-      d.setDate(mon.getDate() + i)
-      count += dailyCounts.value[formatDateStr(d)] || 0
-    }
-    weeks.push({ label, count, startDate: new Date(mon), endDate: new Date(sun) })
+    const label = `${mon.getMonth() + 1}.${mon.getDate()}~`
+    const startStr = formatDateStr(mon)
+    const endStr = formatDateStr(sun)
+    const hasFeedback = allFeedbacks.value.some((fb) => {
+      if (fb.feedbackType !== 'WEEKLY') return false
+      return fb.targetDate >= startStr && fb.targetDate <= endStr
+    })
+    weeks.push({ label, hasFeedback, startDate: new Date(mon), endDate: new Date(sun) })
     mon = new Date(mon)
     mon.setDate(mon.getDate() + 7)
   }
   return weeks
 })
 
-// 주간 요약 피드백
-const weeklyFeedback = computed(() => {
+// 주간: 선택된 주의 WEEKLY 피드백 (1개)
+const selectedWeeklyFeedback = computed(() => {
   if (selectedWeekIdx.value === null) return null
   const week = quarterWeeks.value[selectedWeekIdx.value]
   if (!week) return null
-  const fb = allFeedbacks.value.find((f) => {
-    if (f.feedbackType !== 'WEEKLY') return false
-    const d = new Date(f.createdAt)
-    return d >= week.startDate && d <= week.endDate
-  })
-  if (!fb) return null
+  const startStr = formatDateStr(week.startDate)
+  const endStr = formatDateStr(week.endDate)
+  return allFeedbacks.value.find((fb) => {
+    if (fb.feedbackType !== 'WEEKLY') return false
+    return fb.targetDate >= startStr && fb.targetDate <= endStr
+  }) || null
+})
+
+// 주간: 선택된 주의 라벨
+const selectedWeeklyLabel = computed(() => {
+  if (selectedWeekIdx.value === null) return ''
+  const week = quarterWeeks.value[selectedWeekIdx.value]
+  if (!week) return ''
   const weekNum = Math.ceil(week.startDate.getDate() / 7)
-  return {
-    title: `${week.startDate.getMonth() + 1}월 ${weekNum}주차`,
-    content: fb.content,
-  }
+  return `${week.startDate.getMonth() + 1}월 ${weekNum}주차 피드백`
+})
+
+// 주간: 선택된 주의 날짜 범위 텍스트
+const selectedWeeklyDateRange = computed(() => {
+  if (selectedWeekIdx.value === null) return ''
+  const week = quarterWeeks.value[selectedWeekIdx.value]
+  if (!week) return ''
+  const s = week.startDate
+  const e = week.endDate
+  return `${s.getMonth() + 1}월 ${s.getDate()}일 ~ ${e.getMonth() + 1}월 ${e.getDate()}일`
 })
 
 function selectWeek(idx) {
   selectedWeekIdx.value = idx
 }
 
-// ── 월간: 12개월 데이터 ──
+// ── 월간: 12개월 데이터 (MONTHLY 타입, 유무만 체크) ──
 const monthlyData = computed(() => {
   const months = []
   for (let m = 0; m < 12; m++) {
     const label = `${m + 1}월`
-    let count = 0
-    const start = new Date(currentYear.value, m, 1)
-    const end = new Date(currentYear.value, m + 1, 0)
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      count += dailyCounts.value[formatDateStr(d)] || 0
-    }
-    months.push({ label, count, month: m })
+    const monthStr = String(m + 1).padStart(2, '0')
+    const startStr = `${currentYear.value}-${monthStr}-01`
+    const endDay = new Date(currentYear.value, m + 1, 0).getDate()
+    const endStr = `${currentYear.value}-${monthStr}-${String(endDay).padStart(2, '0')}`
+    const hasFeedback = allFeedbacks.value.some((fb) => {
+      if (fb.feedbackType !== 'MONTHLY') return false
+      return fb.targetDate >= startStr && fb.targetDate <= endStr
+    })
+    months.push({ label, hasFeedback, month: m })
   }
   return months
 })
 
-const monthlyFeedback = computed(() => {
+// 월간: 선택된 월의 MONTHLY 피드백 (1개)
+const selectedMonthlyFeedback = computed(() => {
   if (selectedMonthIdx.value === null) return null
   const m = monthlyData.value[selectedMonthIdx.value]
   if (!m) return null
-  const fb = allFeedbacks.value.find((f) => {
-    if (f.feedbackType !== 'MONTHLY') return false
-    const d = new Date(f.createdAt)
-    return d.getFullYear() === currentYear.value && d.getMonth() === m.month
-  })
-  if (!fb) return null
-  return {
-    title: `${m.month + 1}월`,
-    content: fb.content,
-  }
+  const monthStr = String(m.month + 1).padStart(2, '0')
+  const startStr = `${currentYear.value}-${monthStr}-01`
+  const endDay = new Date(currentYear.value, m.month + 1, 0).getDate()
+  const endStr = `${currentYear.value}-${monthStr}-${String(endDay).padStart(2, '0')}`
+  return allFeedbacks.value.find((fb) => {
+    if (fb.feedbackType !== 'MONTHLY') return false
+    return fb.targetDate >= startStr && fb.targetDate <= endStr
+  }) || null
 })
 
 function selectMonth(idx) {
@@ -380,35 +456,42 @@ async function loadData() {
   loading.value = true
 
   try {
-    let startDate, endDate
-
     if (activeTab.value === 'daily') {
       const mon = getMonday(currentDate.value)
       const sun = new Date(mon)
       sun.setDate(mon.getDate() + 6)
-      startDate = formatDateStr(mon)
-      endDate = formatDateStr(sun)
+      const startDate = formatDateStr(mon)
+      const endDate = formatDateStr(sun)
+
+      const [countsRes, feedbacksRes] = await Promise.all([
+        getDailyFeedbackCount(memberId, startDate, endDate),
+        getFeedbacks(memberId, 'TASK'),
+      ])
+
+      const countMap = {}
+      ;(countsRes.data || []).forEach((item) => {
+        countMap[item.date] = item.count
+      })
+      dailyCounts.value = countMap
+      allFeedbacks.value = feedbacksRes.data || []
+    } else if (activeTab.value === 'planner') {
+      const { data } = await getFeedbacks(memberId, 'PLANNER')
+      allFeedbacks.value = data || []
+      // 플래너 카운트: targetDate별 집계
+      const countMap = {}
+      allFeedbacks.value.forEach((fb) => {
+        if (fb.targetDate) {
+          countMap[fb.targetDate] = (countMap[fb.targetDate] || 0) + 1
+        }
+      })
+      plannerCounts.value = countMap
     } else if (activeTab.value === 'weekly') {
-      const qStart = new Date(currentYear.value, (currentQuarter.value - 1) * 3, 1)
-      const qEnd = new Date(currentYear.value, currentQuarter.value * 3, 0)
-      startDate = formatDateStr(qStart)
-      endDate = formatDateStr(qEnd)
+      const { data } = await getFeedbacks(memberId, 'WEEKLY')
+      allFeedbacks.value = data || []
     } else {
-      startDate = `${currentYear.value}-01-01`
-      endDate = `${currentYear.value}-12-31`
+      const { data } = await getFeedbacks(memberId, 'MONTHLY')
+      allFeedbacks.value = data || []
     }
-
-    const [countsRes, feedbacksRes] = await Promise.all([
-      getDailyFeedbackCount(memberId, startDate, endDate),
-      getFeedbacks(memberId),
-    ])
-
-    const countMap = {}
-    ;(countsRes.data || []).forEach((item) => {
-      countMap[item.date] = item.count
-    })
-    dailyCounts.value = countMap
-    allFeedbacks.value = feedbacksRes.data || []
   } catch (e) {
     console.error('[Feedback] 데이터 로드 실패:', e)
   } finally {
@@ -423,7 +506,9 @@ function goToDetail(feedbackId) {
 
 // ── watchers ──
 watch(activeTab, () => loadData())
-watch(currentDate, () => { if (activeTab.value === 'daily') loadData() })
+watch(currentDate, () => {
+  if (activeTab.value === 'daily' || activeTab.value === 'planner') loadData()
+})
 watch(currentYear, () => loadData())
 watch(currentQuarter, () => { if (activeTab.value === 'weekly') loadData() })
 
@@ -491,7 +576,7 @@ onMounted(() => loadData())
   color: #333;
 }
 
-/* 주간 캘린더 (일간) */
+/* 주간 캘린더 (일간/플래너) */
 .week-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -547,15 +632,6 @@ onMounted(() => loadData())
 .count-badge.badge-active {
   background: #66bb6a;
   color: #fff;
-}
-
-.count-badge.clickable {
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.count-badge.clickable:hover {
-  opacity: 0.85;
 }
 
 /* 과목 필터 */
@@ -648,7 +724,7 @@ onMounted(() => loadData())
   overflow: hidden;
 }
 
-/* 주간 그리드 */
+/* 주간 그리드 (dot 스타일) */
 .weekly-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
@@ -656,24 +732,60 @@ onMounted(() => loadData())
   margin-bottom: 20px;
 }
 
-.weekly-row {
+.week-cell-box {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+  padding: 12px 4px;
+  border-radius: 12px;
+  background: #f8f8f8;
+  transition: all 0.15s;
 }
 
-.weekly-label {
+.week-cell-box.clickable {
+  cursor: pointer;
+}
+
+.week-cell-box.clickable:hover {
+  background: #f0f0f0;
+}
+
+.week-cell-box.week-box-has {
+  background: #e8f5e9;
+}
+
+.week-cell-box.week-box-selected {
+  background: #333;
+}
+
+.week-cell-box.week-box-selected .week-box-label {
+  color: #fff;
+}
+
+.week-box-label {
   font-size: 12px;
-  color: #888;
+  color: #555;
+  font-weight: 600;
   text-align: center;
+}
+
+.week-box-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #66bb6a;
+}
+
+.week-cell-box.week-box-selected .week-box-dot {
+  background: #fff;
 }
 
 /* 월간 그리드 */
 .month-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
+  gap: 8px;
   margin-bottom: 20px;
 }
 
@@ -681,30 +793,83 @@ onMounted(() => loadData())
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+  padding: 12px 8px;
+  border-radius: 12px;
+  background: #f8f8f8;
+  transition: all 0.15s;
+  position: relative;
+}
+
+.month-cell.clickable {
+  cursor: pointer;
+}
+
+.month-cell.clickable:hover {
+  background: #f0f0f0;
+}
+
+.month-cell.month-has-feedback {
+  background: #e8f5e9;
+}
+
+.month-cell.month-selected {
+  background: #333;
+}
+
+.month-cell.month-selected .month-label {
+  color: #fff;
 }
 
 .month-label {
   font-size: 13px;
-  color: #888;
-  font-weight: 500;
+  color: #555;
+  font-weight: 600;
 }
 
-/* 요약 카드 */
-.summary-card {
+.month-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #66bb6a;
+}
+
+.month-cell.month-selected .month-dot {
+  background: #fff;
+}
+
+/* 주간/월간 피드백 상세 (공용) */
+.monthly-detail {
   background: #f8f9fa;
   border-radius: 12px;
   padding: 20px;
+  cursor: pointer;
+  transition: box-shadow 0.15s;
 }
 
-.summary-title {
+.monthly-detail:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.monthly-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.monthly-detail-title {
   font-size: 15px;
   font-weight: 700;
   color: #333;
-  margin: 0 0 10px;
 }
 
-.summary-content {
+.monthly-detail-date {
+  font-size: 12px;
+  color: #aaa;
+}
+
+.monthly-detail-content {
   font-size: 14px;
   color: #555;
   line-height: 1.7;
