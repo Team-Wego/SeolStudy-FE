@@ -2,8 +2,8 @@
   <el-dialog
     v-model="visible"
     title="공유된 미디어 & 파일"
-    width="720px"
-    top="5vh"
+    :width="isMobile ? '100%' : '720px'"
+    :fullscreen="isMobile"
     @open="loadMedia"
   >
     <!-- 탭 필터 -->
@@ -76,6 +76,7 @@ const props = defineProps({
 })
 
 const visible = defineModel({ type: Boolean, default: false })
+const isMobile = ref(window.innerWidth <= 768)
 const activeTab = ref('all')
 const mediaData = ref([])
 const isLoading = ref(false)
@@ -152,11 +153,19 @@ function getFileIcon(fileName) {
 
 .gallery-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
   padding: 8px 0;
-  max-height: 65vh;
+  max-height: 70vh;
   overflow-y: auto;
+}
+
+@media (min-width: 769px) {
+  .gallery-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    max-height: 65vh;
+  }
 }
 
 .gallery-item {
