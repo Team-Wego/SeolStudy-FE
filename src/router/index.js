@@ -23,6 +23,12 @@ const router = createRouter({
       component: () => import('@/apps/mentee/views/home/TaskCreateView.vue'),
       meta: { transition: 'slide-left' },
     },
+    {
+      path: '/mentee/goals',
+      name: 'GoalList',
+      component: () => import('@/apps/mentee/views/home/GoalListView.vue'),
+      meta: { transition: 'slide-left' },
+    },
     mentorRoutes,
     {
       path: '/',
@@ -32,8 +38,9 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from) => {
-  // 할일 생성 페이지에서 나갈 때 slide-right 전환
-  if (from.name === 'TaskCreate' && to.meta.transition !== 'slide-left') {
+  // 독립 페이지에서 나갈 때 slide-right 전환
+  const slidePages = ['TaskCreate', 'GoalList']
+  if (slidePages.includes(from.name) && to.meta.transition !== 'slide-left') {
     from.meta.transition = 'slide-right'
     to.meta.transition = 'slide-right'
   }
