@@ -172,8 +172,10 @@
           <label class="time-modal-label">시작</label>
           <div class="time-input-row">
             <div class="period-toggle">
-              <button class="period-btn" :class="{ active: timeForm.startPeriod === '오전' }" @click="timeForm.startPeriod = '오전'">오전</button>
-              <button class="period-btn" :class="{ active: timeForm.startPeriod === '오후' }" @click="timeForm.startPeriod = '오후'">오후</button>
+              <button class="period-btn" :class="{ active: timeForm.startPeriod === '오전' }"
+                @click="timeForm.startPeriod = '오전'">오전</button>
+              <button class="period-btn" :class="{ active: timeForm.startPeriod === '오후' }"
+                @click="timeForm.startPeriod = '오후'">오후</button>
             </div>
             <input v-model="timeForm.startHour" type="number" min="1" max="12" placeholder="시" class="time-input" />
             <span class="time-colon">:</span>
@@ -186,8 +188,10 @@
           <label class="time-modal-label">종료</label>
           <div class="time-input-row">
             <div class="period-toggle">
-              <button class="period-btn" :class="{ active: timeForm.endPeriod === '오전' }" @click="timeForm.endPeriod = '오전'">오전</button>
-              <button class="period-btn" :class="{ active: timeForm.endPeriod === '오후' }" @click="timeForm.endPeriod = '오후'">오후</button>
+              <button class="period-btn" :class="{ active: timeForm.endPeriod === '오전' }"
+                @click="timeForm.endPeriod = '오전'">오전</button>
+              <button class="period-btn" :class="{ active: timeForm.endPeriod === '오후' }"
+                @click="timeForm.endPeriod = '오후'">오후</button>
             </div>
             <input v-model="timeForm.endHour" type="number" min="1" max="12" placeholder="시" class="time-input" />
             <span class="time-colon">:</span>
@@ -201,7 +205,8 @@
         <!-- 버튼 영역 -->
         <div class="time-modal-actions">
           <button class="time-modal-cancel" @click="closeTimeModal">취소</button>
-          <button class="time-modal-submit" :class="{ disabled: !isTimeFormValid || timeSubmitting }" :disabled="!isTimeFormValid || timeSubmitting" @click="handleTimeSubmit">
+          <button class="time-modal-submit" :class="{ disabled: !isTimeFormValid || timeSubmitting }"
+            :disabled="!isTimeFormValid || timeSubmitting" @click="handleTimeSubmit">
             {{ timeSubmitting ? '등록 중...' : '추가' }}
           </button>
         </div>
@@ -772,15 +777,15 @@ onMounted(() => {
 }
 
 .study-block.block-ENG {
-  background: rgba(235, 48, 161, 0.44);
-}
-
-.study-block.block-MATH {
   background: rgba(128, 235, 190, 0.70);
 }
 
-.study-block.block-KOR {
+.study-block.block-MATH {
   background: rgba(116, 88, 255, 0.55);
+}
+
+.study-block.block-KOR {
+  background: rgba(235, 48, 161, 0.44);
 }
 
 .study-block.block-ETC {
