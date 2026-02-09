@@ -65,11 +65,25 @@
         <!-- 피드백 입력 (기존 피드백이 없을 때만) -->
         <template v-if="!existingPlannerFeedback">
           <textarea
+            ref="plannerTextareaRef"
             v-model="plannerFeedbackText"
             class="feedback-textarea"
             placeholder="플래너에 대한 격려나 피드백을 남겨주세요."
           />
+          <div v-if="plannerHighlight" class="highlight-preview">
+            <Highlighter :size="12" color="#f9a825" />
+            <span class="highlight-preview-text">{{ plannerHighlight }}</span>
+            <button class="highlight-remove-btn" @click="plannerHighlight = ''">
+              <X :size="12" />
+            </button>
+          </div>
           <div class="feedback-btn-row">
+            <button
+              class="highlight-btn"
+              @click="applyPlannerHighlight"
+            >
+              <Highlighter :size="16" /> 형광펜
+            </button>
             <button
               class="feedback-submit-btn"
               :disabled="!plannerFeedbackText.trim() || plannerFeedbackSubmitting"
@@ -120,11 +134,25 @@
               <!-- 피드백 입력 (기존 피드백이 없을 때만) -->
               <template v-if="!detail.existingFeedback">
                 <textarea
+                  :ref="el => setTaskTextareaRef(el, detail.id)"
                   v-model="detail.feedbackText"
                   class="feedback-textarea"
                   placeholder="학생의 질문에 대한 답변과 상세 피드백을 작성해주세요."
                 />
+                <div v-if="detail.highlight" class="highlight-preview">
+                  <Highlighter :size="12" color="#f9a825" />
+                  <span class="highlight-preview-text">{{ detail.highlight }}</span>
+                  <button class="highlight-remove-btn" @click="detail.highlight = ''">
+                    <X :size="12" />
+                  </button>
+                </div>
                 <div class="feedback-btn-row">
+                  <button
+                    class="highlight-btn"
+                    @click="applyTaskHighlight(detail)"
+                  >
+                    <Highlighter :size="16" /> 형광펜
+                  </button>
                   <button
                     class="task-feedback-btn"
                     :disabled="!detail.feedbackText?.trim() || detail.submitting"
@@ -144,7 +172,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import { ChevronLeft, ChevronRight, Clock, ImageIcon } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, Clock, ImageIcon, Highlighter, X } from 'lucide-vue-next'
 import SubjectTag from '@/components/common/SubjectTag.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import { getDailyTasks, getPlannerComment, getStudyTime, getTaskDetail } from '@/api/task/taskApi'
@@ -166,6 +194,36 @@ const submittedAt = ref('')
 const existingPlannerFeedback = ref(null)
 const plannerFeedbackText = ref('')
 const plannerFeedbackSubmitting = ref(false)
+const plannerHighlight = ref('')
+const plannerTextareaRef = ref(null)
+const taskTextareaRefs = {}
+
+function setTaskTextareaRef(el, id) {
+  if (el) taskTextareaRefs[id] = el
+}
+
+// 형광펜 버튼 클릭: textarea에서 현재 선택된 텍스트를 highlight로 지정
+function applyPlannerHighlight() {
+  const el = plannerTextareaRef.value
+  if (!el) return
+  const selected = el.value.substring(el.selectionStart, el.selectionEnd).trim()
+  if (selected) {
+    plannerHighlight.value = selected
+  } else {
+    alert('형광펜을 적용할 텍스트를 먼저 드래그로 선택해주세요.')
+  }
+}
+
+function applyTaskHighlight(detail) {
+  const el = taskTextareaRefs[detail.id]
+  if (!el) return
+  const selected = el.value.substring(el.selectionStart, el.selectionEnd).trim()
+  if (selected) {
+    detail.highlight = selected
+  } else {
+    alert('형광펜을 적용할 텍스트를 먼저 드래그로 선택해주세요.')
+  }
+}
 
 const dayNames = ['일', '월', '화', '수', '목', '금', '토']
 const subjectTagMap = { KOR: 'korean', ENG: 'english', MATH: 'math' }
@@ -210,14 +268,17 @@ async function handlePlannerFeedback() {
   if (!plannerFeedbackText.value.trim() || plannerFeedbackSubmitting.value) return
   plannerFeedbackSubmitting.value = true
   try {
-    await createFeedback({
+    const data = {
       menteeId: Number(props.menteeId),
       type: 'PLANNER',
       content: plannerFeedbackText.value.trim(),
       targetDate: dateParam.value,
-    })
+    }
+    if (plannerHighlight.value) data.highlight = plannerHighlight.value
+    await createFeedback(data)
     existingPlannerFeedback.value = { content: plannerFeedbackText.value.trim() }
     plannerFeedbackText.value = ''
+    plannerHighlight.value = ''
   } catch (e) {
     console.error('플래너 피드백 등록 실패:', e)
   } finally {
@@ -229,15 +290,18 @@ async function handleTaskFeedback(detail) {
   if (!detail.feedbackText?.trim() || detail.submitting) return
   detail.submitting = true
   try {
-    await createFeedback({
+    const data = {
       menteeId: Number(props.menteeId),
       type: 'TASK',
       taskId: detail.id,
       content: detail.feedbackText.trim(),
       targetDate: dateParam.value,
-    })
+    }
+    if (detail.highlight) data.highlight = detail.highlight
+    await createFeedback(data)
     detail.existingFeedback = { content: detail.feedbackText.trim() }
     detail.feedbackText = ''
+    detail.highlight = ''
   } catch (e) {
     console.error('과제 피드백 등록 실패:', e)
   } finally {
@@ -292,6 +356,8 @@ async function fetchData() {
           ...data,
           existingFeedback: matched || null,
           feedbackText: '',
+          highlight: '',
+          showHighlightBtn: false,
           submitting: false,
           editing: false,
         }
@@ -302,6 +368,8 @@ async function fetchData() {
           comment: '',
           existingFeedback: null,
           feedbackText: '',
+          highlight: '',
+          showHighlightBtn: false,
           submitting: false,
           editing: false,
         }
@@ -631,6 +699,63 @@ onMounted(() => {
 .task-feedback-btn:disabled {
   background: #d1d1d6;
   cursor: not-allowed;
+}
+
+/* 하이라이트 UI */
+.highlight-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: none;
+  background: #fff59d;
+  color: #5d4037;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.highlight-btn:hover {
+  background: #fff176;
+}
+
+.highlight-preview {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  margin-top: 8px;
+  background: #fffde7;
+  border: 1px solid #fff59d;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #5d4037;
+}
+
+.highlight-preview-text {
+  flex: 1;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.highlight-remove-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  color: #999;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.highlight-remove-btn:hover {
+  color: #f44336;
 }
 
 /* 공통 */
