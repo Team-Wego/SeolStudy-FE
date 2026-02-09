@@ -9,17 +9,32 @@
 
       <div class="form-field">
         <label class="form-label">날짜 선택 <span class="required">*</span></label>
-        <div class="date-selection-wrapper">
-          <input type="date" class="form-input date-picker" @change="addDate" />
-          <div v-if="form.dates.length > 0" class="selected-dates-chips">
-            <div v-for="(date, idx) in form.dates" :key="idx" class="date-chip">
-              {{ date }}
-              <button class="chip-remove" @click="removeDate(idx)">
-                <X :size="12" />
-              </button>
+        <div class="inline-calendar">
+          <div class="calendar-nav">
+            <button type="button" class="nav-btn" @click="prevMonth">
+              <ChevronLeft :size="18" />
+            </button>
+            <span class="view-month">{{ viewYear }}년 {{ viewMonth + 1 }}월</span>
+            <button type="button" class="nav-btn" @click="nextMonth">
+              <ChevronRight :size="18" />
+            </button>
+          </div>
+          <div class="calendar-grid">
+            <span v-for="d in ['월', '화', '수', '목', '금', '토', '일']" :key="d" class="day-label">{{ d }}</span>
+            <div v-for="(dateObj, idx) in calendarDates" :key="idx" class="calendar-date" :class="{
+              'not-current': !dateObj.isCurrentMonth,
+              'is-selected': isSelected(dateObj.fullDate),
+              'is-today': dateObj.fullDate === todayStr()
+            }" @click="toggleDate(dateObj.fullDate)">
+              <span class="date-text">{{ dateObj.day }}</span>
             </div>
           </div>
-          <p v-else class="helper-text">과제를 등록할 날짜를 선택해주세요. (다중 선택 가능)</p>
+        </div>
+        <div class="selected-summary">
+          <span v-if="form.dates.length > 0">
+            <strong>{{ form.dates.length }}개</strong>의 날짜 선택됨
+          </span>
+          <span v-else class="empty-msg">날짜를 클릭하여 선택해주세요.</span>
         </div>
       </div>
 
@@ -31,7 +46,7 @@
       <div class="form-field">
         <label class="form-label">과목 <span class="required">*</span></label>
         <div class="subject-buttons">
-          <button v-for="subj in subjects" :key="subj.value" class="subject-btn"
+          <button v-for="subj in subjects" :key="subj.value" type="button" class="subject-btn"
             :class="{ active: form.subject === subj.value }" @click="form.subject = subj.value">
             {{ subj.label }}
           </button>
@@ -50,20 +65,20 @@
 
       <div class="form-field">
         <label class="form-label">내용</label>
-        <textarea v-model="form.description" class="form-textarea" placeholder="내용을 입력해주세요." rows="3" />
+        <textarea v-model="form.description" class="form-textarea" placeholder="상세 내용을 입력해주세요." rows="3" />
       </div>
 
       <div class="form-field">
         <label class="form-label">파일 첨부</label>
         <div class="file-upload-wrapper">
           <input ref="fileInputRef" type="file" multiple hidden @change="handleFileSelect" />
-          <button class="file-add-btn" @click="fileInputRef?.click()">
+          <button type="button" class="file-add-btn" @click="fileInputRef?.click()">
             <Paperclip :size="16" /> 파일 선택하기
           </button>
           <div v-if="form.files.length > 0" class="attached-file-list">
             <div v-for="(file, idx) in form.files" :key="idx" class="attached-file-item">
               <span class="file-name">{{ file.name }}</span>
-              <button class="file-remove-btn" @click="removeFile(idx)">
+              <button type="button" class="file-remove-btn" @click="removeFile(idx)">
                 <X :size="14" />
               </button>
             </div>
@@ -72,8 +87,8 @@
       </div>
 
       <div class="modal-actions">
-        <button class="cancel-btn" @click="$emit('close')">취소</button>
-        <button class="submit-btn" :disabled="!isValid || submitting" @click="handleSubmit">
+        <button type="button" class="cancel-btn" @click="$emit('close')">취소</button>
+        <button type="button" class="submit-btn" :disabled="!isValid || submitting" @click="handleSubmit">
           {{ submitting ? '등록 중...' : '등록하기' }}
         </button>
       </div>
@@ -83,7 +98,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
-import { X, Paperclip } from 'lucide-vue-next'
+import { X, Paperclip, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import { createTask } from '@/api/task/taskApi'
 import { getGoals } from '@/api/mentoring/goalApi'
 
@@ -93,6 +108,10 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['close', 'created'])
+
+// 달력 표시용 상태
+const viewYear = ref(new Date().getFullYear())
+const viewMonth = ref(new Date().getMonth())
 
 const subjects = [
   { label: '국어', value: 'korean' },
@@ -107,12 +126,12 @@ const subjectToEnum = {
 }
 
 const form = reactive({
-  dates: props.date ? [props.date] : [], // 다중 날짜 배열
+  dates: props.date ? [props.date] : [],
   title: '',
   subject: null,
   goalId: null,
   description: '',
-  files: [], // 첨부 파일 배열
+  files: [],
 })
 
 const goals = ref([])
@@ -121,30 +140,80 @@ const fileInputRef = ref(null)
 
 const isValid = computed(() => form.title.trim() && form.subject && form.dates.length > 0)
 
-onMounted(async () => {
-  try {
-    const { data } = await getGoals(Number(props.menteeId))
-    goals.value = data || []
-  } catch (e) {
-    console.error('목표 목록 조회 실패:', e)
+/* --- 유틸리티 함수 --- */
+function todayStr() {
+  const d = new Date()
+  return formatDate(d)
+}
+
+function formatDate(date) {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+/* --- 달력 로직 --- */
+const calendarDates = computed(() => {
+  const dates = []
+  const firstDay = new Date(viewYear.value, viewMonth.value, 1)
+  const lastDay = new Date(viewYear.value, viewMonth.value + 1, 0)
+
+  // 월요일 시작을 위해 보정 (0:일, 1:월...)
+  let startOffset = firstDay.getDay() - 1
+  if (startOffset < 0) startOffset = 6
+
+  // 이전 달 날짜
+  for (let i = startOffset; i > 0; i--) {
+    const d = new Date(viewYear.value, viewMonth.value, 1 - i)
+    dates.push({ day: d.getDate(), fullDate: formatDate(d), isCurrentMonth: false })
   }
+  // 이번 달 날짜
+  for (let i = 1; i <= lastDay.getDate(); i++) {
+    const d = new Date(viewYear.value, viewMonth.value, i)
+    dates.push({ day: i, fullDate: formatDate(d), isCurrentMonth: true })
+  }
+  // 다음 달 날짜 (6줄 고정을 위해 42개 맞춤)
+  const remaining = 42 - dates.length
+  for (let i = 1; i <= remaining; i++) {
+    const d = new Date(viewYear.value, viewMonth.value + 1, i)
+    dates.push({ day: d.getDate(), fullDate: formatDate(d), isCurrentMonth: false })
+  }
+  return dates
 })
 
-/* 날짜 관련 로직 */
-function addDate(e) {
-  const selected = e.target.value
-  if (selected && !form.dates.includes(selected)) {
-    form.dates.push(selected)
-    form.dates.sort() // 날짜순 정렬
+function toggleDate(dateStr) {
+  const index = form.dates.indexOf(dateStr)
+  if (index > -1) {
+    form.dates.splice(index, 1)
+  } else {
+    form.dates.push(dateStr)
   }
-  e.target.value = '' // 입력창 초기화
 }
 
-function removeDate(idx) {
-  form.dates.splice(idx, 1)
+function isSelected(dateStr) {
+  return form.dates.includes(dateStr)
 }
 
-/* 파일 관련 로직 */
+function prevMonth() {
+  if (viewMonth.value === 0) {
+    viewYear.value--
+    viewMonth.value = 11
+  } else {
+    viewMonth.value--
+  }
+}
+
+function nextMonth() {
+  if (viewMonth.value === 11) {
+    viewYear.value++
+    viewMonth.value = 0
+  } else {
+    viewMonth.value++
+  }
+}
+
+/* --- 파일 및 목표 로직 --- */
 function handleFileSelect(e) {
   const selectedFiles = Array.from(e.target.files || [])
   form.files = [...form.files, ...selectedFiles]
@@ -155,14 +224,22 @@ function removeFile(idx) {
   form.files.splice(idx, 1)
 }
 
-/* 제출 로직 */
+onMounted(async () => {
+  try {
+    const { data } = await getGoals(Number(props.menteeId))
+    goals.value = data || []
+  } catch (e) {
+    console.error('목표 목록 조회 실패:', e)
+  }
+})
+
+/* --- 제출 로직 --- */
 async function handleSubmit() {
   if (!isValid.value || submitting.value) return
 
   submitting.value = true
   try {
-    // 백엔드 API 설계에 따라 다중 날짜 처리를 순회하거나 다중 날짜용 API 호출
-    // 여기서는 기존 단일 등록 API를 날짜 수만큼 호출하는 예시입니다. (API가 리스트를 받는다면 수정 필요)
+    // 선택된 모든 날짜에 대해 병렬 등록 요청
     const promises = form.dates.map(date => {
       return createTask(Number(props.menteeId), {
         title: form.title.trim(),
@@ -170,7 +247,7 @@ async function handleSubmit() {
         subject: subjectToEnum[form.subject],
         description: form.description.trim() || null,
         goalId: form.goalId || null,
-      }, form.files) // 파일도 같이 전송 (API에서 multipart 대응 필요)
+      }, form.files)
     })
 
     await Promise.all(promises)
@@ -185,7 +262,6 @@ async function handleSubmit() {
 </script>
 
 <style scoped>
-/* 기존 스타일 유지 및 추가 */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -196,24 +272,23 @@ async function handleSubmit() {
 .modal-content {
   position: fixed;
   z-index: 50;
-  background: #fff;
-  border-radius: 24px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-  padding: 32px;
-  width: 460px;
-  /* 약간 넓힘 */
-  max-height: 90vh;
-  /* 높이 조절 */
-  overflow-y: auto;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+  background: #fff;
+  border-radius: 24px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  padding: 32px;
+  width: 440px;
+  max-height: 95vh;
+  overflow-y: auto;
 }
 
 .modal-title {
   font-size: 18px;
-  font-weight: 700;
-  margin: 0 0 24px;
+  font-weight: 800;
+  margin-bottom: 24px;
+  color: #1a1a1a;
 }
 
 .form-field {
@@ -223,66 +298,131 @@ async function handleSubmit() {
 .form-label {
   display: block;
   font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 8px;
+  font-weight: 700;
+  margin-bottom: 10px;
   color: #333;
 }
 
 .required {
-  color: #e9412e;
+  color: #ff4d4f;
 }
 
-/* 날짜 칩 스타일 */
-.date-selection-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+/* 인라인 달력 스타일 */
+.inline-calendar {
+  border: 1px solid #f0f0f0;
+  border-radius: 16px;
+  padding: 16px;
+  background: #fafafa;
 }
 
-.selected-dates-chips {
+.calendar-nav {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.date-chip {
-  display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 6px;
-  background: #f0f9ff;
-  color: #0ca5fe;
-  padding: 6px 10px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  border: 1px solid #bae6fd;
+  margin-bottom: 15px;
 }
 
-.chip-remove {
-  background: none;
-  border: none;
+.view-month {
+  font-size: 14px;
+  font-weight: 800;
+  color: #1a1a1a;
+}
+
+.nav-btn {
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 4px;
   cursor: pointer;
   display: flex;
-  color: #0ca5fe;
+  align-items: center;
 }
 
-.helper-text {
-  font-size: 12px;
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.day-label {
+  font-size: 11px;
+  font-weight: 600;
   color: #999;
-  margin: 0;
+  text-align: center;
+  padding-bottom: 8px;
 }
 
+.calendar-date {
+  aspect-ratio: 1/1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.calendar-date:hover {
+  background: #eee;
+}
+
+.calendar-date.not-current {
+  color: #ccc;
+}
+
+.calendar-date.is-selected {
+  background: #0ca5fe !important;
+  color: #fff !important;
+  font-weight: 700;
+}
+
+.calendar-date.is-today::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  width: 4px;
+  height: 4px;
+  background: #0ca5fe;
+  border-radius: 50%;
+}
+
+.calendar-date.is-selected.is-today::after {
+  background: #fff;
+}
+
+.selected-summary {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #666;
+  text-align: right;
+}
+
+.empty-msg {
+  color: #bbb;
+}
+
+/* 입력 필드 공통 */
 .form-input,
 .form-textarea,
 .form-select {
   width: 100%;
-  padding: 12px 14px;
+  padding: 12px 16px;
   border-radius: 12px;
-  border: 1px solid #f5f5f5;
-  background: #f5f5f5;
+  border: 1px solid #f0f0f0;
+  background: #f9f9f9;
   font-size: 14px;
   outline: none;
-  color: #333;
+  transition: border-color 0.2s;
+}
+
+.form-input:focus,
+.form-textarea:focus,
+.form-select:focus {
+  border-color: #0ca5fe;
+  background: #fff;
 }
 
 .subject-buttons {
@@ -293,12 +433,13 @@ async function handleSubmit() {
 .subject-btn {
   padding: 8px 16px;
   border-radius: 20px;
-  border: 1px solid #e5e5ea;
+  border: 1px solid #eee;
   background: #fff;
   font-size: 13px;
-  font-weight: 500;
-  color: #8e8e93;
+  font-weight: 600;
+  color: #888;
   cursor: pointer;
+  transition: all 0.2s;
 }
 
 .subject-btn.active {
@@ -307,28 +448,25 @@ async function handleSubmit() {
   border-color: #0ca5fe;
 }
 
-/* 파일 업로드 스타일 */
-.file-upload-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
+/* 파일 업로드 */
 .file-add-btn {
+  width: 100%;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px dashed #ccc;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  color: #666;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 10px;
-  border-radius: 12px;
-  border: 1px dashed #d1d1d6;
-  background: #fff;
-  font-size: 13px;
-  color: #666;
-  cursor: pointer;
 }
 
 .attached-file-list {
+  margin-top: 10px;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -336,16 +474,16 @@ async function handleSubmit() {
 
 .attached-file-item {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
   padding: 8px 12px;
-  background: #f9f9f9;
+  background: #f3f4f6;
   border-radius: 8px;
   font-size: 13px;
 }
 
 .file-name {
-  color: #555;
+  color: #444;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -356,12 +494,14 @@ async function handleSubmit() {
   border: none;
   color: #999;
   cursor: pointer;
+  padding: 2px;
 }
 
+/* 액션 버튼 */
 .modal-actions {
   display: flex;
   gap: 12px;
-  margin-top: 16px;
+  margin-top: 24px;
 }
 
 .cancel-btn,
@@ -370,19 +510,19 @@ async function handleSubmit() {
   padding: 14px;
   border-radius: 14px;
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
 }
 
 .cancel-btn {
-  border: 1px solid #e5e5ea;
   background: #fff;
-  color: #8e8e93;
+  border: 1px solid #eee;
+  color: #999;
 }
 
 .submit-btn {
-  border: none;
   background: #0ca5fe;
+  border: none;
   color: #fff;
 }
 
@@ -404,12 +544,12 @@ async function handleSubmit() {
 
 .popup-enter-active,
 .popup-leave-active {
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .popup-enter-from,
 .popup-leave-to {
   opacity: 0;
-  transform: translate(-50%, -50%) scale(0.9) !important;
+  transform: translate(-50%, -40%) scale(0.95);
 }
 </style>
