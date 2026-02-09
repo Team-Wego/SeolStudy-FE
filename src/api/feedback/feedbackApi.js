@@ -18,3 +18,15 @@ export const getDailyFeedbackCount = (menteeId, startDate, endDate) => {
     params: { menteeId, startDate, endDate },
   })
 }
+
+// 피드백 생성 (multipart/form-data: request part + optional files)
+export const createFeedback = (data, files) => {
+  const formData = new FormData()
+  formData.append('request', new Blob([JSON.stringify(data)], { type: 'application/json' }))
+  if (files && files.length > 0) {
+    files.forEach((file) => formData.append('files', file))
+  }
+  return api.post('/mentors/feedback', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}
