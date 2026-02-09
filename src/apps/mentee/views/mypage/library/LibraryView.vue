@@ -82,6 +82,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { ChevronLeft, Search, Download, Check } from 'lucide-vue-next'
 import { getCookie } from '@/utils/cookie'
 import { getWorksheetFiles } from '@/api/task/taskApi'
+import { createPresignedGetUrl } from '@/api/file/file.js'
 import downloadIcon from '@/assets/icons/download.svg'
 
 const router = useRouter()
@@ -145,20 +146,26 @@ function formatSize(bytes) {
   return `${kb.toFixed(0)}KB`
 }
 
-function downloadFile(url, name) {
+const downloadFile = async (url, name) => {
   if (!url) return
-  const a = document.createElement('a')
-  a.href = url
-  a.download = name || 'file'
-  a.target = '_blank'
-  a.click()
+
+  const response = await createPresignedGetUrl(url, name);
+  const presignedUrl = response.data || response;
+
+  const a = document.createElement('a');
+  a.href = presignedUrl;
+
+  a.download = name || 'file';
+  a.target = '_blank';
+  a.click();
 }
 
-function downloadSelected() {
+async function downloadSelected() {
   const selected = fileList.value.filter((f) => selectedFiles.value.includes(f.worksheetId))
-  selected.forEach((file) => {
-    downloadFile(file.url, file.worksheetName)
-  })
+  for (const file of selected) {
+    await downloadFile(file.url, file.worksheetName)
+    await new Promise((r) => setTimeout(r, 500))
+  }
 }
 
 async function fetchFiles() {
@@ -409,8 +416,13 @@ onMounted(() => {
 }
 
 @keyframes skeleton-shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 .skeleton-text {
