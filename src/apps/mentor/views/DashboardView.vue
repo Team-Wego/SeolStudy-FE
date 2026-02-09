@@ -35,12 +35,12 @@
 
           <template v-if="loading">
             <div v-for="i in 4" :key="'prog-skel-' + i" class="progress-item">
-              <div class="skeleton" style="width: 44px; height: 44px; border-radius: 50%;" />
-              <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
-                <div class="skeleton skeleton-text" style="width: 60px; height: 14px;" />
+              <div class="skeleton" style="width: 52px; height: 52px; border-radius: 50%;" />
+              <div class="skeleton skeleton-text" style="width: 60px; height: 15px;" />
+              <div class="progress-right">
+                <div class="skeleton skeleton-text" style="width: 30px; height: 14px; align-self: flex-end;" />
                 <div class="skeleton skeleton-text" style="width: 100%; height: 6px; border-radius: 3px;" />
               </div>
-              <div class="skeleton skeleton-text" style="width: 30px; height: 14px;" />
             </div>
           </template>
 
@@ -56,15 +56,13 @@
               <div v-else class="progress-avatar progress-avatar-placeholder">
                 <User :size="20" color="#999" />
               </div>
-              <div class="progress-info">
-                <span class="progress-name">{{ mentee.name }}</span>
-                <div class="progress-bar-wrap">
-                  <div class="progress-bar">
-                    <div class="progress-fill" :style="{ width: progressPercent(mentee) + '%' }" />
-                  </div>
+              <span class="progress-name">{{ mentee.menteeName }}</span>
+              <div class="progress-right">
+                <span class="progress-count">{{ mentee.submittedCount ?? 0 }}/{{ mentee.assignedCount ?? 0 }}</span>
+                <div class="progress-bar">
+                  <div class="progress-fill" :style="{ width: progressPercent(mentee) + '%' }" />
                 </div>
               </div>
-              <span class="progress-count">{{ mentee.completedCount ?? 0 }}/{{ mentee.totalCount ?? 0 }}</span>
             </div>
           </template>
         </div>
@@ -157,8 +155,8 @@ const subjectTagMap = {
 }
 
 function progressPercent(mentee) {
-  if (!mentee.totalCount || mentee.totalCount === 0) return 0
-  return Math.round((mentee.completedCount / mentee.totalCount) * 100)
+  if (!mentee.assignedCount || mentee.submittedCount === 0) return 0
+  return Math.round((mentee.submittedCount / mentee.assignedCount) * 100)
 }
 
 function formatFeedbackDate(dateStr) {
@@ -194,6 +192,8 @@ async function fetchDashboardData() {
       getMenteeProgress(),
       getPendingFeedbacks(),
     ])
+
+    console.log('Dashboard API results:', progressRes.value.data)
 
     if (summaryRes.status === 'fulfilled') {
       summary.value = summaryRes.value.data
@@ -237,7 +237,7 @@ onMounted(() => {
 /* ─── 2열 그리드 레이아웃 ─── */
 .dashboard-grid {
   display: grid;
-  grid-template-columns: 480px 1fr;
+  grid-template-columns: 400px 1fr;
   gap: 20px;
   align-items: start;
 }
@@ -267,11 +267,11 @@ onMounted(() => {
 /* ─── 요약 카드 ─── */
 .summary-card {
   background: #fff;
-  border-radius: 20px;
-  padding: 24px;
+  border-radius: 40px;
+  padding: 28px;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  /* align-items: center; */
   gap: 12px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
@@ -285,44 +285,41 @@ onMounted(() => {
 .summary-text {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 4px;
 }
 
 .summary-label {
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 500;
-  color: #999;
+  color: #8E8E93;
 }
 
 .summary-value {
-  font-size: 26px;
-  font-weight: 800;
+  font-size: 24px;
+  font-weight: 700;
   color: #1a1a1a;
 }
 
 .summary-value.highlight {
-  color: #0CA5FE;
+  color: #F54842;
 }
 
 /* ─── 섹션 카드 (공통) ─── */
 .section-card {
   background: #fff;
-  border-radius: 20px;
-  padding: 28px 24px 20px;
+  border-radius: 40px;
+  padding: 30px 28px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
 .section-title {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 800;
-  color: #1a1a1a;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .section-subtitle {
-  font-size: 13px;
-  color: #999;
+  font-size: 14px;
+  color: #8E8E93;
   margin-bottom: 20px;
 }
 
@@ -330,9 +327,9 @@ onMounted(() => {
 .progress-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px 0;
-  border-bottom: 1px solid #F0F0F0;
+  gap: 14px;
+  padding: 18px 0;
+  border-bottom: 1px solid #E8E8E8;
 }
 
 .progress-item:last-child {
@@ -340,8 +337,8 @@ onMounted(() => {
 }
 
 .progress-avatar {
-  width: 44px;
-  height: 44px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
@@ -354,28 +351,38 @@ onMounted(() => {
   justify-content: center;
 }
 
-.progress-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
 .progress-name {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   color: #1a1a1a;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.progress-bar-wrap {
-  width: 100%;
+.progress-right {
+  display: flex;
+  flex-direction: column;
+  /* align-items: flex-end; */
+  align-items: center;
+  gap: 6px;
+  width: 60px;
+  flex-shrink: 0;
+}
+
+.progress-count {
+  font-size: 14px;
+  font-weight: 600;
+  color: #666;
+  white-space: nowrap;
 }
 
 .progress-bar {
   width: 100%;
   height: 6px;
-  background: #F0F0F0;
+  background: #E8E8E8;
   border-radius: 3px;
   overflow: hidden;
 }
@@ -385,14 +392,6 @@ onMounted(() => {
   background: #0CA5FE;
   border-radius: 3px;
   transition: width 0.4s ease;
-}
-
-.progress-count {
-  font-size: 13px;
-  font-weight: 600;
-  color: #666;
-  white-space: nowrap;
-  flex-shrink: 0;
 }
 
 .empty-progress {
@@ -526,8 +525,13 @@ onMounted(() => {
 }
 
 @keyframes skeleton-shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 .skeleton-text {
@@ -560,8 +564,8 @@ onMounted(() => {
   }
 
   .summary-icon {
-    width: 44px;
-    height: 44px;
+    width: 60px;
+    height: 60px;
   }
 
   .summary-value {

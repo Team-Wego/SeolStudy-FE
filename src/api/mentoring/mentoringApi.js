@@ -1,17 +1,17 @@
-import api from '@/api'
+import api from "@/api";
 
 export const getMenteeList = () => {
-  return api.get('/mentors/mentees')
-}
+    return api.get("/mentors/mentees");
+};
 
 export const getDashboardSummary = () => {
-  return api.get('/mentors/dashboard/summary')
-}
+    return api.get("/mentors/summary");
+};
 
 export const getPendingFeedbacks = () => {
-  return api.get('/mentors/dashboard/pending-feedbacks')
-}
+    return api.get("/mentors/submissions/pending-feedback");
+};
 
 export const getMenteeProgress = () => {
-  return api.get('/mentors/dashboard/mentee-progress')
-}
+    return api.get("/mentors/mentees/submission-summary");
+};
