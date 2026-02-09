@@ -33,7 +33,7 @@
 
       <!-- 피드백 내용 -->
       <div class="content-card">
-        <p class="content-text">{{ feedback.content }}</p>
+        <p class="content-text" v-html="renderHighlightedText(feedback.content, feedback.highlight)"></p>
       </div>
 
       <!-- 첨부 이미지 -->
@@ -79,6 +79,18 @@ function formatDate(dateStr) {
 
 function goBack() {
   router.back()
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
+function renderHighlightedText(content, highlight) {
+  if (!content) return ''
+  const escaped = escapeHtml(content)
+  if (!highlight) return escaped
+  const escapedHighlight = escapeHtml(highlight)
+  return escaped.split(escapedHighlight).join(`<span class="highlight-mark">${escapedHighlight}</span>`)
 }
 
 function previewImage(url) {
@@ -229,6 +241,13 @@ onMounted(() => loadDetail())
   object-fit: cover;
   border-radius: 8px;
   cursor: pointer;
+}
+
+:deep(.highlight-mark) {
+  background-color: #fff59d;
+  border-radius: 2px;
+  padding: 0px 1px;
+  box-decoration-break: clone;
 }
 
 .loading-text,

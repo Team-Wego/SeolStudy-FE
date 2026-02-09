@@ -62,7 +62,6 @@
         </button>
       </div>
 
-      <!-- 피드백 카드 목록 -->
       <div v-if="loading" class="loading-text">불러오는 중...</div>
       <div v-else-if="filteredDailyFeedbacks.length === 0" class="empty-text">
         해당 날짜에 피드백이 없습니다
@@ -82,7 +81,11 @@
             <span class="card-date">{{ formatDate(fb.createdAt) }}</span>
           </div>
           <div v-if="fb.taskTitle" class="card-subtitle">{{ fb.taskTitle }}</div>
-          <p class="card-content">{{ fb.content }}</p>
+          
+          <p 
+            class="card-content"
+            v-html="renderHighlightedText(fb.content, fb.highlight)"
+          ></p>
         </div>
       </div>
     </template>
@@ -122,7 +125,11 @@
             <span class="monthly-detail-title">{{ selectedWeeklyLabel }}</span>
             <span class="monthly-detail-date">{{ selectedWeeklyDateRange }}</span>
           </div>
-          <p class="monthly-detail-content">{{ selectedWeeklyFeedback.content }}</p>
+          
+          <p 
+            class="monthly-detail-content"
+            v-html="renderHighlightedText(selectedWeeklyFeedback.content, selectedWeeklyFeedback.highlight)"
+          ></p>
         </div>
       </template>
       <div v-else-if="!loading" class="empty-text">주를 선택하세요</div>
@@ -158,7 +165,11 @@
             <span class="monthly-detail-title">{{ monthlyData[selectedMonthIdx].label }} 피드백</span>
             <span class="monthly-detail-date">{{ formatDate(selectedMonthlyFeedback.createdAt) }}</span>
           </div>
-          <p class="monthly-detail-content">{{ selectedMonthlyFeedback.content }}</p>
+          
+          <p 
+            class="monthly-detail-content"
+            v-html="renderHighlightedText(selectedMonthlyFeedback.content, selectedMonthlyFeedback.highlight)"
+          ></p>
         </div>
       </template>
       <div v-else-if="!loading" class="empty-text">월을 선택하세요</div>
@@ -203,7 +214,11 @@
             <span class="card-goal">플래너 피드백</span>
             <span class="card-date">{{ formatDate(fb.createdAt) }}</span>
           </div>
-          <p class="card-content">{{ fb.content }}</p>
+          
+          <p 
+            class="card-content"
+            v-html="renderHighlightedText(fb.content, fb.highlight)"
+          ></p>
         </div>
       </div>
     </template>
@@ -220,6 +235,19 @@ import { getFeedbacks, getDailyFeedbackCount } from '@/api/feedback/feedbackApi'
 
 const router = useRouter()
 const loading = ref(false)
+
+// [수정] 형광펜 적용을 위한 헬퍼 함수
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
+const renderHighlightedText = (content, highlight) => {
+  if (!content) return ''
+  const escaped = escapeHtml(content)
+  if (!highlight) return escaped
+  const escapedHighlight = escapeHtml(highlight)
+  return escaped.split(escapedHighlight).join(`<span class="highlight-mark">${escapedHighlight}</span>`)
+}
 
 // ── 탭 ──
 const tabs = [
@@ -550,6 +578,16 @@ onMounted(() => loadData())
 </script>
 
 <style scoped>
+/* [수정] 형광펜 스타일 추가 */
+/* v-html로 주입되는 요소는 Scoped CSS가 바로 적용되지 않으므로 :deep()을 사용해야 합니다 */
+:deep(.highlight-mark) {
+  background-color: #cff1d4; /*  형광펜 색상 (원하는 색으로 조정 가능, 예: #fff176) */
+  border-radius: 2px;
+  padding: 0px 1px;
+  box-decoration-break: clone; /* 줄바꿈 시에도 스타일 유지 */
+}
+
+
 .feedback-page {
   padding: 0 20px 24px;
 }
