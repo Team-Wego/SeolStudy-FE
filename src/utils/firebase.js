@@ -1,3 +1,4 @@
+// Firebase Cloud Messaging
 import { initializeApp } from 'firebase/app'
 import { getMessaging, getToken, onMessage } from 'firebase/messaging'
 import { registerFcmToken } from '@/api/notification/notificationApi'
