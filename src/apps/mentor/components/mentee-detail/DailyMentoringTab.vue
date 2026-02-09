@@ -53,6 +53,15 @@
         <!-- 기존 플래너 피드백 표시 -->
         <div v-if="existingPlannerFeedback && !plannerEditing" class="existing-feedback">
           <p v-html="renderHighlightedText(existingPlannerFeedback.content, existingPlannerFeedback.highlight)"></p>
+          <div v-if="existingPlannerFeedback.feedbackImages?.length" class="feedback-images">
+            <img
+              v-for="(img, idx) in existingPlannerFeedback.feedbackImages"
+              :key="img.imageId"
+              :src="img.imageUrl"
+              class="feedback-image"
+              @click="openPreview(existingPlannerFeedback.feedbackImages.map(i => i.imageUrl), idx)"
+            />
+          </div>
           <div class="feedback-actions">
             <button class="feedback-action-btn" @click="startPlannerEdit">
               <Pencil :size="14" /> 수정
@@ -74,9 +83,24 @@
               <X :size="12" />
             </button>
           </div>
+          <!-- 첨부 파일 미리보기 -->
+          <div v-if="plannerFiles.length > 0" class="attached-files">
+            <div v-for="(file, idx) in plannerFiles" :key="idx" class="attached-file">
+              <Paperclip :size="12" color="#999" />
+              <span class="attached-file-name">{{ file.name }}</span>
+              <button class="attached-file-remove" @click="removePlannerFile(idx)">
+                <X :size="12" />
+              </button>
+            </div>
+          </div>
           <div class="feedback-btn-row">
             <button class="highlight-btn" @click="applyPlannerHighlight">
               <Highlighter :size="16" /> 형광펜
+            </button>
+            <input ref="plannerFileInputRef" type="file" accept="image/*" multiple hidden
+              @change="handlePlannerFileSelect" />
+            <button class="attach-btn" @click="plannerFileInputRef?.click()">
+              <Paperclip :size="16" /> 사진 첨부
             </button>
             <button v-if="plannerEditing" class="feedback-cancel-btn" @click="cancelPlannerEdit">
               취소
@@ -128,8 +152,8 @@
             <h5 class="sub-section-title">과제 인증</h5>
             <div v-if="detail.images?.length || detail.comment" class="submission-content">
               <div v-if="detail.images?.length" class="task-images">
-                <img v-for="img in detail.images" :key="img.id" :src="img.url" class="task-image"
-                  @click="previewImage(img.url)" />
+                <img v-for="(img, idx) in detail.images" :key="img.id" :src="img.url" class="task-image"
+                  @click="openPreview(detail.images.map(i => i.url), idx)" />
               </div>
               <div v-if="detail.comment" class="student-task-comment">
                 <p>{{ detail.comment }}</p>
@@ -144,6 +168,15 @@
             <!-- 기존 피드백 표시 -->
             <div v-if="detail.existingFeedback && !detail.editing" class="existing-feedback">
               <p v-html="renderHighlightedText(detail.existingFeedback.content, detail.existingFeedback.highlight)"></p>
+              <div v-if="detail.existingFeedback.feedbackImages?.length" class="feedback-images">
+                <img
+                  v-for="(img, idx) in detail.existingFeedback.feedbackImages"
+                  :key="img.imageId"
+                  :src="img.imageUrl"
+                  class="feedback-image"
+                  @click="openPreview(detail.existingFeedback.feedbackImages.map(i => i.imageUrl), idx)"
+                />
+              </div>
               <div class="feedback-actions">
                 <button class="feedback-action-btn" @click="startTaskEdit(detail)">
                   <Pencil :size="14" /> 수정
@@ -165,9 +198,24 @@
                   <X :size="12" />
                 </button>
               </div>
+              <!-- 첨부 파일 미리보기 -->
+              <div v-if="detail.files?.length > 0" class="attached-files">
+                <div v-for="(file, idx) in detail.files" :key="idx" class="attached-file">
+                  <Paperclip :size="12" color="#999" />
+                  <span class="attached-file-name">{{ file.name }}</span>
+                  <button class="attached-file-remove" @click="removeTaskFile(detail, idx)">
+                    <X :size="12" />
+                  </button>
+                </div>
+              </div>
               <div class="feedback-btn-row">
                 <button class="highlight-btn" @click="applyTaskHighlight(detail)">
                   <Highlighter :size="16" /> 형광펜
+                </button>
+                <input :ref="el => setTaskFileInputRef(el, detail.id)" type="file" accept="image/*" multiple hidden
+                  @change="handleTaskFileSelect(detail, $event)" />
+                <button class="attach-btn" @click="taskFileInputRefs[detail.id]?.click()">
+                  <Paperclip :size="16" /> 사진 첨부
                 </button>
                 <button v-if="detail.editing" class="feedback-cancel-btn" @click="cancelTaskEdit(detail)">
                   취소
@@ -182,12 +230,33 @@
         </div>
       </div>
     </template>
+
+    <!-- 이미지 미리보기 모달 -->
+    <Teleport to="body">
+      <div v-if="previewModal.show" class="image-preview-overlay" @click.self="closePreview">
+        <button class="preview-close-btn" @click="closePreview">
+          <X :size="24" />
+        </button>
+        <button v-if="previewModal.images.length > 1" class="preview-nav-btn prev" @click="prevPreviewImage">
+          <ChevronLeft :size="28" />
+        </button>
+        <div class="preview-image-wrapper">
+          <img :src="previewModal.images[previewModal.index]" class="preview-image" />
+          <div v-if="previewModal.images.length > 1" class="preview-counter">
+            {{ previewModal.index + 1 }} / {{ previewModal.images.length }}
+          </div>
+        </div>
+        <button v-if="previewModal.images.length > 1" class="preview-nav-btn next" @click="nextPreviewImage">
+          <ChevronRight :size="28" />
+        </button>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import { ChevronLeft, ChevronRight, Clock, Highlighter, X, Pencil, Trash2, FileText, Download } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, Clock, Highlighter, X, Pencil, Trash2, FileText, Download, Paperclip } from 'lucide-vue-next'
 import SubjectTag from '@/components/common/SubjectTag.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import { getDailyTasks, getPlannerComment, getStudyTime, getTaskDetail } from '@/api/task/taskApi'
@@ -211,11 +280,38 @@ const plannerFeedbackText = ref('')
 const plannerFeedbackSubmitting = ref(false)
 const plannerHighlight = ref('')
 const plannerEditing = ref(false)
+const plannerFiles = ref([])
+const plannerFileInputRef = ref(null)
 const plannerTextareaRef = ref(null)
 const taskTextareaRefs = {}
+const taskFileInputRefs = {}
 
 function setTaskTextareaRef(el, id) {
   if (el) taskTextareaRefs[id] = el
+}
+
+function setTaskFileInputRef(el, id) {
+  if (el) taskFileInputRefs[id] = el
+}
+
+function handlePlannerFileSelect(event) {
+  const files = Array.from(event.target.files || [])
+  plannerFiles.value = [...plannerFiles.value, ...files]
+  event.target.value = ''
+}
+
+function removePlannerFile(index) {
+  plannerFiles.value.splice(index, 1)
+}
+
+function handleTaskFileSelect(detail, event) {
+  const files = Array.from(event.target.files || [])
+  detail.files = [...(detail.files || []), ...files]
+  event.target.value = ''
+}
+
+function removeTaskFile(detail, index) {
+  detail.files.splice(index, 1)
 }
 
 // 형광펜 버튼 클릭: textarea에서 현재 선택된 텍스트를 highlight로 지정
@@ -276,8 +372,24 @@ function changeDate(offset) {
   currentDate.value = addDays(currentDate.value, offset)
 }
 
-function previewImage(url) {
-  if (url) window.open(url, '_blank')
+const previewModal = ref({ show: false, images: [], index: 0 })
+
+function openPreview(images, index) {
+  previewModal.value = { show: true, images, index }
+}
+
+function closePreview() {
+  previewModal.value.show = false
+}
+
+function prevPreviewImage() {
+  const m = previewModal.value
+  m.index = (m.index - 1 + m.images.length) % m.images.length
+}
+
+function nextPreviewImage() {
+  const m = previewModal.value
+  m.index = (m.index + 1) % m.images.length
 }
 
 function escapeHtml(str) {
@@ -309,10 +421,11 @@ async function handlePlannerFeedback() {
       targetDate: dateParam.value,
     }
     if (plannerHighlight.value) data.highlight = plannerHighlight.value
-    await createFeedback(data)
+    await createFeedback(data, plannerFiles.value.length > 0 ? plannerFiles.value : undefined)
     existingPlannerFeedback.value = { content: plannerFeedbackText.value.trim() }
     plannerFeedbackText.value = ''
     plannerHighlight.value = ''
+    plannerFiles.value = []
   } catch (e) {
     console.error('플래너 피드백 등록 실패:', e)
   } finally {
@@ -432,10 +545,12 @@ async function handleTaskFeedback(detail) {
       targetDate: dateParam.value,
     }
     if (detail.highlight) data.highlight = detail.highlight
-    await createFeedback(data)
+    const files = detail.files?.length > 0 ? detail.files : undefined
+    await createFeedback(data, files)
     detail.existingFeedback = { content: detail.feedbackText.trim() }
     detail.feedbackText = ''
     detail.highlight = ''
+    detail.files = []
   } catch (e) {
     console.error('과제 피드백 등록 실패:', e)
   } finally {
@@ -490,6 +605,7 @@ async function fetchData() {
           existingFeedback: matched || null,
           feedbackText: '',
           highlight: '',
+          files: [],
           showHighlightBtn: false,
           submitting: false,
           editing: false,
@@ -502,6 +618,7 @@ async function fetchData() {
           existingFeedback: null,
           feedbackText: '',
           highlight: '',
+          files: [],
           showHighlightBtn: false,
           submitting: false,
           editing: false,
@@ -1032,6 +1149,87 @@ onMounted(() => {
   background: #f5f5f5;
 }
 
+/* 파일 첨부 */
+.attach-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+  background: #fff;
+  color: #555;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.attach-btn:hover {
+  background: #f5f5f5;
+}
+
+.attached-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.attached-file {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: #f3f4f6;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #555;
+}
+
+.attached-file-name {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attached-file-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 1px;
+  color: #999;
+  display: flex;
+  align-items: center;
+}
+
+.attached-file-remove:hover {
+  color: #f44336;
+}
+
+/* 피드백 이미지 */
+.feedback-images {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.feedback-image {
+  width: 140px;
+  height: 110px;
+  object-fit: cover;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.feedback-image:hover {
+  opacity: 0.85;
+}
+
 /* 형광펜 렌더링 */
 :deep(.highlight-mark) {
   background-color: #fff59d;
@@ -1052,5 +1250,87 @@ onMounted(() => {
 .empty-text.small {
   padding: 16px 0;
   font-size: 13px;
+}
+
+</style>
+
+<style>
+/* 이미지 미리보기 모달 (Teleport → body이므로 scoped 불가) */
+.image-preview-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview-close-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: background 0.15s;
+}
+
+.preview-close-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.preview-nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  padding: 12px 8px;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+
+.preview-nav-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.preview-nav-btn.prev {
+  left: 20px;
+}
+
+.preview-nav-btn.next {
+  right: 20px;
+}
+
+.preview-image-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  max-width: 85vw;
+  max-height: 85vh;
+}
+
+.preview-image {
+  max-width: 85vw;
+  max-height: 80vh;
+  object-fit: contain;
+  border-radius: 8px;
+  user-select: none;
+}
+
+.preview-counter {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  font-weight: 600;
 }
 </style>
