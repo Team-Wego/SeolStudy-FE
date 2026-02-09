@@ -62,9 +62,11 @@ import { useRouter } from 'vue-router'
 import { Mail, Lock } from 'lucide-vue-next'
 import { login } from '@/api/auth/authApi'
 import { setCookie } from '@/utils/cookie'
+import { useChatStore } from '@/stores/chatStore'
 // import { requestNotificationPermission } from '@/utils/firebase'
 
 const router = useRouter()
+const chatStore = useChatStore()
 const formRef = ref(null)
 const errorMsg = ref('')
 const loading = ref(false)
@@ -95,6 +97,9 @@ async function handleLogin() {
     setCookie('memberId', data.id)
     setCookie('memberRole', data.role)
     setCookie('memberName', data.name)
+
+    // 쿠키 설정 후 chatStore 사용자 정보 갱신
+    chatStore.loadCurrentUser()
 
     if (data.role === 'MENTOR') {
       router.push('/mentor/dashboard')

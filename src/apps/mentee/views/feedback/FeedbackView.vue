@@ -96,12 +96,17 @@
             <div
               v-for="w in row.weeks"
               :key="w.idx"
-              class="week-cell-box clickable"
-              :class="{ 'week-box-selected': selectedWeekIdx === w.idx, 'week-box-has': w.hasFeedback }"
+              class="week-cell-wrapper"
+              :class="{ 'week-wrapper-selected': selectedWeekIdx === w.idx }"
               @click="selectWeek(w.idx)"
             >
-              <span class="week-box-label">{{ w.label }}</span>
-              <span v-if="w.hasFeedback" class="week-box-dot" />
+              <div
+                class="week-cell-box"
+                :class="{ 'week-box-has': w.hasFeedback }"
+              >
+                <span class="week-box-label">{{ w.label }}</span>
+                <span v-if="w.hasFeedback" class="week-box-dot" />
+              </div>
             </div>
           </div>
         </template>
@@ -129,12 +134,17 @@
         <div
           v-for="(m, idx) in monthlyData"
           :key="idx"
-          class="month-cell clickable"
-          :class="{ 'month-selected': selectedMonthIdx === idx, 'month-has-feedback': m.hasFeedback }"
+          class="month-cell-wrapper"
+          :class="{ 'month-wrapper-selected': selectedMonthIdx === idx }"
           @click="selectMonth(idx)"
         >
-          <span class="month-label">{{ m.label }}</span>
-          <span v-if="m.hasFeedback" class="month-dot" />
+          <div
+            class="month-cell"
+            :class="{ 'month-has-feedback': m.hasFeedback }"
+          >
+            <span class="month-label">{{ m.label }}</span>
+            <span v-if="m.hasFeedback" class="month-dot" />
+          </div>
         </div>
       </div>
 
@@ -778,6 +788,25 @@ onMounted(() => loadData())
   gap: 8px;
 }
 
+.week-cell-wrapper {
+  padding: 6px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.week-cell-wrapper:hover {
+  background: #f0f0f0;
+}
+
+.week-wrapper-selected {
+  background: #e8ecf1;
+}
+
+.week-wrapper-selected:hover {
+  background: #e8ecf1;
+}
+
 .week-cell-box {
   display: flex;
   flex-direction: column;
@@ -789,24 +818,8 @@ onMounted(() => loadData())
   transition: all 0.15s;
 }
 
-.week-cell-box.clickable {
-  cursor: pointer;
-}
-
-.week-cell-box.clickable:hover {
-  background: #ebebeb;
-}
-
 .week-cell-box.week-box-has {
   background: #4AF38A;
-}
-
-.week-cell-box.week-box-selected {
-  background: #222;
-}
-
-.week-cell-box.week-box-selected .week-box-label {
-  color: #fff;
 }
 
 .week-box-label {
@@ -823,16 +836,31 @@ onMounted(() => loadData())
   background: #1a1a1a;
 }
 
-.week-cell-box.week-box-selected .week-box-dot {
-  background: #fff;
-}
-
 /* 월간 그리드 */
 .month-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 8px;
   margin-bottom: 24px;
+}
+
+.month-cell-wrapper {
+  padding: 6px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.month-cell-wrapper:hover {
+  background: #f0f0f0;
+}
+
+.month-wrapper-selected {
+  background: #e8ecf1;
+}
+
+.month-wrapper-selected:hover {
+  background: #e8ecf1;
 }
 
 .month-cell {
@@ -847,24 +875,8 @@ onMounted(() => loadData())
   position: relative;
 }
 
-.month-cell.clickable {
-  cursor: pointer;
-}
-
-.month-cell.clickable:hover {
-  background: #ebebeb;
-}
-
 .month-cell.month-has-feedback {
   background: #4AF38A;
-}
-
-.month-cell.month-selected {
-  background: #222;
-}
-
-.month-cell.month-selected .month-label {
-  color: #fff;
 }
 
 .month-label {
@@ -878,10 +890,6 @@ onMounted(() => loadData())
   height: 7px;
   border-radius: 50%;
   background: #1a1a1a;
-}
-
-.month-cell.month-selected .month-dot {
-  background: #fff;
 }
 
 /* 주간/월간 피드백 상세 (공용) */

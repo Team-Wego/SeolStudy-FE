@@ -232,10 +232,23 @@ onMounted(async () => {
   roomPollTimer = setInterval(loadRooms, ROOM_POLL_INTERVAL)
 })
 
+// 알림 클릭으로 roomId 쿼리가 변경될 때 해당 채팅방 자동 선택
+watch(() => route.query.roomId, (newRoomId) => {
+  if (!newRoomId) return
+  const targetRoom = rooms.value.find((r) => r.roomId === newRoomId)
+  if (targetRoom && selectedRoomId.value !== newRoomId) {
+    selectRoom(targetRoom)
+  }
+})
+
 onUnmounted(() => {
+  showGallery.value = false
   if (roomPollTimer) clearInterval(roomPollTimer)
   disconnect()
   chatStore.reset()
+
+  // Element Plus el-dialog 오버레이가 body에 남는 경우 제거
+  document.querySelectorAll('.el-overlay').forEach((el) => el.remove())
 })
 </script>
 
