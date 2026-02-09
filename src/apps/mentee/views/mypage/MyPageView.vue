@@ -201,6 +201,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ChevronRight, User, Headphones, LogOut } from 'lucide-vue-next'
 import { removeCookie, getCookie } from '@/utils/cookie'
+import { useChatStore } from '@/stores/chatStore'
 import { getMember, getStudyStatus } from '@/api/member/memberApi'
 import { getTaskDailyStatus } from '@/api/task/taskApi'
 import mailbox from '@/assets/icons/mailbox.svg'
@@ -216,6 +217,7 @@ import {
 } from 'date-fns'
 
 const router = useRouter()
+const chatStore = useChatStore()
 const viewMode = ref('weekly')
 const member = ref({})
 const studyStatus = ref({})
@@ -362,6 +364,7 @@ function goToSubject(subjectKey) {
 
 function handleLogout() {
   showLogoutModal.value = false
+  chatStore.reset()
   removeCookie('memberId')
   removeCookie('memberRole')
   removeCookie('memberName')

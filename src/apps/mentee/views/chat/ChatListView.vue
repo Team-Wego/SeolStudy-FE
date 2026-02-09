@@ -62,6 +62,8 @@ const mentorName = ref('멘토')
 
 // 초기화: 채팅방 로드 → WebSocket 연결 → 메시지 이력 로드
 onMounted(async () => {
+  // 이전 세션 데이터 완전 초기화
+  chatStore.reset()
   chatStore.isLoading = true
 
   try {
@@ -112,6 +114,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   disconnect()
+  chatStore.reset()
 })
 
 // 메시지 전송
