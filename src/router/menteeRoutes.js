@@ -53,5 +53,23 @@ export default {
       name: 'MenteeSubjectDetail',
       component: () => import('@/apps/mentee/views/subject/SubjectDetailView.vue'),
     },
+    {
+      path: 'tasks/create',
+      name: 'TaskCreate',
+      component: () => import('@/apps/mentee/views/home/TaskCreateView.vue'),
+      meta: { transition: 'slide-left' },
+    },
+    {
+      path: 'tasks/:id',
+      name: 'TaskDetail',
+      component: () => import('@/apps/mentee/views/home/TaskDetailView.vue'),
+      meta: { transition: 'slide-left' },
+    },
+    {
+      path: 'goals',
+      name: 'GoalList',
+      component: () => import('@/apps/mentee/views/home/GoalListView.vue'),
+      meta: { transition: 'slide-left' },
+    },
   ],
 }

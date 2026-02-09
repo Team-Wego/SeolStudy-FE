@@ -17,24 +17,6 @@ const router = createRouter({
       component: () => import('@/views/ComponentTest.vue'),
     },
     menteeRoutes,
-    {
-      path: '/mentee/tasks/create',
-      name: 'TaskCreate',
-      component: () => import('@/apps/mentee/views/home/TaskCreateView.vue'),
-      meta: { transition: 'slide-left' },
-    },
-    {
-      path: '/mentee/tasks/:id',
-      name: 'TaskDetail',
-      component: () => import('@/apps/mentee/views/home/TaskDetailView.vue'),
-      meta: { transition: 'slide-left' },
-    },
-    {
-      path: '/mentee/goals',
-      name: 'GoalList',
-      component: () => import('@/apps/mentee/views/home/GoalListView.vue'),
-      meta: { transition: 'slide-left' },
-    },
     mentorRoutes,
     {
       path: '/',

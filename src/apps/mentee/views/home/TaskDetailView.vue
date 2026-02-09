@@ -271,8 +271,10 @@ async function loadTask() {
     if (data.goalId) {
       try {
         const goalsRes = await getGoals(memberId)
+        console.log('[목표 디버그] goalId:', data.goalId, 'goals 응답:', goalsRes.data)
         const goals = Array.isArray(goalsRes.data) ? goalsRes.data : (goalsRes.data?.content || [])
         const matched = goals.find(g => g.goalId === data.goalId || g.id === data.goalId)
+        console.log('[목표 디버그] 매칭된 목표:', matched)
         if (matched) goalName.value = matched.name || matched.goalName || ''
       } catch (e) {
         console.error('목표 로드 실패:', e)
@@ -731,11 +733,10 @@ onMounted(() => loadTask())
 /* Bottom Bar */
 .bottom-bar {
   position: fixed;
-  bottom: 0;
+  bottom: 80px;
   left: 0;
   right: 0;
   padding: 16px 20px;
-  padding-bottom: max(16px, env(safe-area-inset-bottom));
   background: #F5F5F5;
   z-index: 20;
 }
