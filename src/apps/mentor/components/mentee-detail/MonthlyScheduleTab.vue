@@ -22,18 +22,13 @@
         <span v-for="label in dayLabels" :key="label" class="day-label">{{ label }}</span>
       </div>
       <div class="calendar-grid">
-        <div
-          v-for="(d, idx) in monthDates"
-          :key="idx"
-          class="calendar-cell"
-          :class="{
-            'other-month': d && d.getMonth() !== currentMonth,
-            'selected': d && selectedDate && isSameDate(d, selectedDate),
-            'has-task': d && hasTaskOn(d),
-          }"
-          @click="d && selectDate(d)"
-        >
+        <div v-for="(d, idx) in monthDates" :key="idx" class="calendar-cell" :class="{
+          'other-month': d && d.getMonth() !== currentMonth,
+          'selected': d && selectedDate && isSameDate(d, selectedDate),
+          'has-task': d && hasTaskOn(d),
+        }" @click="d && selectDate(d)">
           <span v-if="d" class="cell-date">{{ d.getDate() }}</span>
+          <div v-if="d && hasTaskOn(d)" class="task-dot"></div>
         </div>
       </div>
     </div>
@@ -47,11 +42,7 @@
         등록된 과제가 없습니다.
       </div>
       <div v-for="task in selectedDateTasks" :key="task.id" class="date-task-item">
-        <SubjectTag
-          v-if="subjectTagMap[task.subject]"
-          :subject="subjectTagMap[task.subject]"
-          size="sm"
-        />
+        <SubjectTag v-if="subjectTagMap[task.subject]" :subject="subjectTagMap[task.subject]" size="sm" />
         <span class="date-task-title">{{ task.title }}</span>
         <StatusBadge :type="task.isChecked ? 'complete' : 'incomplete'" size="sm" />
       </div>
@@ -63,13 +54,8 @@
 
       <!-- 주차 탭 -->
       <div class="week-tabs">
-        <button
-          v-for="(week, idx) in weeks"
-          :key="idx"
-          class="week-tab"
-          :class="{ active: activeWeekIdx === idx }"
-          @click="activeWeekIdx = idx"
-        >
+        <button v-for="(week, idx) in weeks" :key="idx" class="week-tab" :class="{ active: activeWeekIdx === idx }"
+          @click="activeWeekIdx = idx">
           <span class="week-tab-label">{{ currentMonth + 1 }}월 {{ idx + 1 }}주차</span>
           <span class="week-tab-range">({{ week.rangeLabel }})</span>
         </button>
@@ -81,16 +67,10 @@
           <p>{{ activeWeekFeedback.content }}</p>
         </div>
         <template v-else>
-          <textarea
-            v-model="weeklyFeedbackText"
-            class="feedback-textarea"
-            :placeholder="activeWeekFeedbackPlaceholder"
-          />
-          <button
-            class="feedback-submit-btn"
-            :disabled="!weeklyFeedbackText.trim() || weeklySubmitting"
-            @click="handleWeeklyFeedback"
-          >
+          <textarea v-model="weeklyFeedbackText" class="feedback-textarea"
+            :placeholder="activeWeekFeedbackPlaceholder" />
+          <button class="feedback-submit-btn" :disabled="!weeklyFeedbackText.trim() || weeklySubmitting"
+            @click="handleWeeklyFeedback">
             {{ weeklySubmitting ? '등록 중...' : '등록하기' }}
           </button>
         </template>
@@ -105,29 +85,18 @@
         <p>{{ monthlyFeedback.content }}</p>
       </div>
       <template v-else>
-        <textarea
-          v-model="monthlyFeedbackText"
-          class="feedback-textarea"
-          placeholder="이번 달 학생의 전반적인 성취도와 다음 달 방향성을 작성해주세요."
-        />
-        <button
-          class="feedback-submit-btn"
-          :disabled="!monthlyFeedbackText.trim() || monthlySubmitting"
-          @click="handleMonthlyFeedback"
-        >
+        <textarea v-model="monthlyFeedbackText" class="feedback-textarea"
+          placeholder="이번 달 학생의 전반적인 성취도와 다음 달 방향성을 작성해주세요." />
+        <button class="feedback-submit-btn" :disabled="!monthlyFeedbackText.trim() || monthlySubmitting"
+          @click="handleMonthlyFeedback">
           {{ monthlySubmitting ? '등록 중...' : '등록하기' }}
         </button>
       </template>
     </div>
 
     <!-- 과제 등록 모달 -->
-    <TaskCreateModal
-      v-if="showTaskModal"
-      :mentee-id="menteeId"
-      :date="taskModalDate"
-      @close="showTaskModal = false"
-      @created="handleTaskCreated"
-    />
+    <TaskCreateModal v-if="showTaskModal" :mentee-id="menteeId" :date="taskModalDate" @close="showTaskModal = false"
+      @created="handleTaskCreated" />
   </div>
 </template>
 
@@ -469,17 +438,35 @@ onMounted(() => {
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
+  gap: 8px;
 }
 
 .calendar-cell {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 44px;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  max-width: 44px;
+  justify-self: center;
   cursor: pointer;
   border-radius: 50%;
   transition: background 0.15s;
+  position: relative;
+}
+
+.task-dot {
+  position: absolute;
+  bottom: 6px;
+  width: 4px;
+  height: 4px;
+  background-color: #4af38a;
+  border-radius: 50%;
+}
+
+.calendar-cell.selected .task-dot {
+  background-color: #fff;
 }
 
 .calendar-cell:hover {
