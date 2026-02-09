@@ -112,6 +112,19 @@
 
     <!-- Hidden file input -->
     <input ref="fileInputRef" type="file" accept="image/*" multiple hidden @change="handleFileSelected" />
+
+    <!-- Toast Modal -->
+    <Transition name="toast">
+      <div v-if="showToast" class="toast-overlay" @click="showToast = false">
+        <div class="toast-card" @click.stop>
+          <div class="toast-icon-wrap">
+            <CheckCircle :size="40" color="#34C759" />
+          </div>
+          <p class="toast-title">공부 인증 완료!</p>
+          <button class="toast-btn" @click="showToast = false">확인</button>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -134,6 +147,7 @@ const commentInput = ref('')
 const commentEditing = ref(false)
 const fileInputRef = ref(null)
 const uploading = ref(false)
+const showToast = ref(false)
 
 const subjectTagMap = { ENG: 'english', MATH: 'math', KOR: 'korean' }
 const subjectNameMap = { KOR: '국어', ENG: '영어', MATH: '수학', ETC: '기타' }
@@ -160,7 +174,7 @@ function previewImage(url) {
 
 function handleCertification() {
   if (task.value?.images?.length) {
-    alert('공부 인증이 완료되었습니다!')
+    showToast.value = true
     return
   }
   fileInputRef.value?.click()
@@ -672,5 +686,78 @@ onMounted(() => loadTask())
 
 .skeleton-text {
   border-radius: 6px;
+}
+
+/* Toast Modal */
+.toast-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.toast-card {
+  background: #fff;
+  border-radius: 24px;
+  padding: 36px 28px 28px;
+  text-align: center;
+  width: 100%;
+  max-width: 300px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+
+.toast-icon-wrap {
+  margin-bottom: 16px;
+}
+
+.toast-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #1A1A1A;
+  margin: 0 0 24px;
+}
+
+.toast-btn {
+  width: 100%;
+  padding: 14px;
+  border-radius: 14px;
+  border: none;
+  background: #0CA5FE;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Toast Transition */
+.toast-enter-active {
+  transition: opacity 0.2s ease;
+}
+.toast-enter-active .toast-card {
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease;
+}
+.toast-leave-active {
+  transition: opacity 0.15s ease;
+}
+.toast-leave-active .toast-card {
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+.toast-enter-from {
+  opacity: 0;
+}
+.toast-enter-from .toast-card {
+  transform: scale(0.85);
+  opacity: 0;
+}
+.toast-leave-to {
+  opacity: 0;
+}
+.toast-leave-to .toast-card {
+  transform: scale(0.9);
+  opacity: 0;
 }
 </style>
