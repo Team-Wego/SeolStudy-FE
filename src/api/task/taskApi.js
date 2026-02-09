@@ -78,3 +78,15 @@ export function updatePlannerComment(menteeId, plannerId, data) {
 export function deletePlannerComment(menteeId, plannerId) {
     return api.delete(`/mentees/${menteeId}/planner-comments/${plannerId}`);
 }
+
+export function getTaskDetail(taskId) {
+    return api.get(`/tasks/${taskId}`);
+}
+
+export function uploadTaskImages(menteeId, taskId, files) {
+    const formData = new FormData();
+    files.forEach((file) => formData.append("files", file));
+    return api.post(`/mentees/${menteeId}/tasks/${taskId}/images`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+    });
+}
