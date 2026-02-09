@@ -536,12 +536,15 @@ async function handleTimeSubmit() {
   timeSubmitting.value = true
   const memberId = getCookie('memberId')
 
+  console.log('[공부기록] 요청 데이터:', { taskId: timeForm.taskId, startedAt, endedAt })
+
   try {
-    await createStudyTime(Number(memberId), { taskId: timeForm.taskId, startedAt, endedAt })
+    const res = await createStudyTime(Number(memberId), { taskId: timeForm.taskId, startedAt, endedAt })
+    console.log('[공부기록] 등록 성공:', res.data)
     closeTimeModal()
     await fetchData() // 타임테이블 갱신
   } catch (e) {
-    console.error('공부 시간 등록 실패:', e)
+    console.error('[공부기록] 등록 실패:', e.response?.data || e.message)
     timeError.value = '등록에 실패했습니다.'
   } finally {
     timeSubmitting.value = false
@@ -562,6 +565,7 @@ async function fetchData() {
 
     tasks.value = tasksRes.data || []
     plannerComment.value = commentRes?.data || null
+    console.log('[공부기록] studyTime API 응답:', studyTimeRes?.data)
     studyTimes.value = studyTimeRes?.data?.studyTimes || []
     commentExpanded.value = false
     checkCommentTruncation()
