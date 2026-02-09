@@ -1,14 +1,23 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { getCookie } from '@/utils/cookie'
 
 export const useChatStore = defineStore('chat', () => {
-  // 현재 사용자 (쿠키에서 가져옴)
-  const currentUser = computed(() => ({
-    id: Number(getCookie('memberId')),
-    name: getCookie('memberName') || '',
-    role: getCookie('memberRole') || '',
-  }))
+  // 현재 사용자 (쿠키에서 명시적으로 로드)
+  const currentUser = ref({
+    id: null,
+    name: '',
+    role: '',
+  })
+
+  // 쿠키에서 사용자 정보를 다시 읽어옴
+  function loadCurrentUser() {
+    currentUser.value = {
+      id: Number(getCookie('memberId')),
+      name: getCookie('memberName') || '',
+      role: getCookie('memberRole') || '',
+    }
+  }
 
   // 채팅방 정보
   const currentRoom = ref(null)
@@ -48,7 +57,9 @@ export const useChatStore = defineStore('chat', () => {
     currentRoom.value = null
     messages.value = []
     isConnected.value = false
+    isLoading.value = false
     unreadCount.value = 0
+    loadCurrentUser()
   }
 
   return {
@@ -61,6 +72,7 @@ export const useChatStore = defineStore('chat', () => {
     addMessage,
     setMessages,
     setUnreadCount,
+    loadCurrentUser,
     reset,
   }
 })

@@ -113,8 +113,12 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  showGallery.value = false
   disconnect()
   chatStore.reset()
+
+  // Element Plus el-dialog 오버레이가 body에 남는 경우 제거
+  document.querySelectorAll('.el-overlay').forEach((el) => el.remove())
 })
 
 // 메시지 전송
