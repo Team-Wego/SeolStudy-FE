@@ -796,7 +796,7 @@ onMounted(() => loadData())
 }
 
 .week-cell-wrapper:hover {
-  background: #e8ecf1;
+  background: #f0f0f0;
 }
 
 .week-wrapper-selected {
@@ -852,7 +852,7 @@ onMounted(() => loadData())
 }
 
 .month-cell-wrapper:hover {
-  background: #e8ecf1;
+  background: #f0f0f0;
 }
 
 .month-wrapper-selected {
