@@ -100,21 +100,22 @@
             <div v-for="fb in pendingFeedbacks" :key="fb.taskId" class="feedback-item">
               <!-- 왼쪽 아바타 -->
               <div class="feedback-avatar-wrap">
-                <img v-if="fb.profileUrl" :src="fb.profileUrl" class="feedback-avatar" alt="프로필" />
-                <div v-else class="feedback-avatar feedback-avatar-placeholder">
-                  {{ fb.name?.charAt(0) || '?' }}
+                <img v-if="fb.menteeProfileUrl" :src="fb.menteeProfileUrl" class="progress-avatar" alt="프로필" />
+
+                <div v-else class="progress-avatar progress-avatar-placeholder">
+                  <User :size="20" color="#999" />
                 </div>
               </div>
 
               <!-- 중앙 정보 -->
               <div class="feedback-info">
                 <div class="feedback-meta">
-                  <span class="feedback-name">{{ fb.name }}</span>
+                  <span class="feedback-name">{{ fb.menteeName }}</span>
                   <SubjectTag v-if="subjectTagMap[fb.subject]" :subject="subjectTagMap[fb.subject]" size="sm" />
                   <span class="feedback-date">{{ formatFeedbackDate(fb.submittedAt) }}</span>
                 </div>
-                <span class="feedback-task-title">{{ fb.taskTitle }}</span>
-                <p v-if="fb.taskComment" class="feedback-task-comment">{{ fb.taskComment }}</p>
+                <span class="feedback-task-title">{{ fb.title }}</span>
+                <p v-if="fb.comment" class="feedback-task-comment">{{ fb.comment }}</p>
               </div>
 
               <!-- 우측 버튼 -->
@@ -193,7 +194,7 @@ async function fetchDashboardData() {
       getPendingFeedbacks(),
     ])
 
-    console.log('Dashboard API results:', progressRes.value.data)
+    console.log(feedbackRes.value.data)
 
     if (summaryRes.status === 'fulfilled') {
       summary.value = summaryRes.value.data
@@ -455,8 +456,7 @@ onMounted(() => {
 
 .feedback-name {
   font-size: 14px;
-  font-weight: 700;
-  color: #1a1a1a;
+  font-weight: 600;
 }
 
 .feedback-date {
@@ -465,16 +465,15 @@ onMounted(() => {
 }
 
 .feedback-task-title {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
-  color: #1a1a1a;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .feedback-task-comment {
-  font-size: 13px;
+  font-size: 14px;
   color: #666;
   overflow: hidden;
   text-overflow: ellipsis;
