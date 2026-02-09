@@ -567,7 +567,10 @@ onMounted(() => { fetchRangeTasks(); fetchFeedbacks() })
   background: #4af38a;
 }
 
-.calendar-cell.selected .cell-date,
+.calendar-cell.selected .cell-date {
+  color: #fff;
+}
+
 .calendar-cell.selected .task-dot {
   color: #fff;
   background-color: #fff;
