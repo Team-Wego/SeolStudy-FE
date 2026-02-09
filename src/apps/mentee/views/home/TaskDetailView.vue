@@ -19,7 +19,9 @@
     <template v-else-if="task">
       <!-- Task Meta -->
       <div class="task-meta">
-        <span v-if="task.goalName" class="meta-goal">목표 | {{ task.goalName }}</span>
+        <span v-if="goalName" class="meta-goal">목표 | {{ goalName }}</span>
+      </div>
+      <div style="margin-bottom: 12px;">
         <SubjectTag v-if="subjectTagMap[task.subject]" :subject="subjectTagMap[task.subject]" size="sm" />
         <span v-else class="subject-tag tag-etc">{{ subjectNameMap[task.subject] || task.subject }}</span>
       </div>
@@ -40,7 +42,6 @@
 
       <!-- Certification Section -->
       <template v-if="!task.images?.length">
-        <!-- Empty State (인증 전) -->
         <div class="empty-cert">
           <AlertCircle :size="28" color="#C2C2C2" />
           <p class="empty-cert-text">학습지 사진을 업로드해</p>
@@ -48,7 +49,7 @@
         </div>
       </template>
       <template v-else>
-        <!-- Uploaded Images (인증 후) -->
+        <!-- Uploaded Images -->
         <div class="cert-images">
           <div class="cert-images-scroll">
             <img v-for="img in task.images" :key="img.id" :src="img.url" class="cert-image"
@@ -56,35 +57,62 @@
           </div>
         </div>
 
-        <!-- Mentor Feedback -->
-        <div v-if="feedback" class="feedback-section">
-          <div class="mentor-row">
-            <div class="mentor-avatar">
-              <img v-if="feedback.mentorProfileUrl" :src="feedback.mentorProfileUrl" />
-              <span v-else class="avatar-fallback">{{ feedback.mentorName?.charAt(0) }}</span>
+        <!-- 채팅형 피드백 영역 -->
+        <div v-if="feedback" class="chat-area">
+          <!-- 멘토 피드백 카드 -->
+          <div class="chat-card mentor-feedback-card">
+            <div class="mentor-row">
+              <div class="mentor-avatar">
+                <img v-if="feedback.mentorProfileUrl" :src="feedback.mentorProfileUrl" />
+                <span v-else class="avatar-fallback">{{ feedback.mentorName?.charAt(0) }}</span>
+              </div>
+              <div class="mentor-info">
+                <span class="mentor-name">{{ feedback.mentorName }} 멘토님</span>
+                <span v-if="feedback.mentorDepartment" class="mentor-dept">{{ feedback.mentorDepartment }}</span>
+              </div>
             </div>
-            <div class="mentor-info">
-              <span class="mentor-name">{{ feedback.mentorName }} 멘토님</span>
-              <span v-if="feedback.mentorDepartment" class="mentor-dept">{{ feedback.mentorDepartment }}</span>
-            </div>
+            <span class="great-badge">GREAT</span>
+            <p class="chat-text">{{ feedback.content }}</p>
+            <span class="chat-time right">{{ formatTimeAgo(feedback.createdAt) }}</span>
           </div>
-          <span class="great-badge">GREAT</span>
-          <p class="feedback-text">{{ feedback.content }}</p>
-          <span class="feedback-time">{{ formatTimeAgo(feedback.createdAt) }}</span>
+
+          <!-- 멘티 코멘트 카드 -->
+          <div v-if="task.comment" class="chat-card student-card">
+            <div class="student-header">
+              <div class="student-avatar">
+                <span>나</span>
+              </div>
+              <span class="chat-time">{{ formatTimeAgo(task.commentCreatedAt) }}</span>
+            </div>
+            <p class="chat-text">{{ task.comment }}</p>
+          </div>
+
+          <!-- 멘토 답글 카드 -->
+          <div v-if="feedback.commentReply" class="chat-card mentor-reply-card">
+            <div class="reply-header">
+              <div class="reply-avatar">
+                <img v-if="feedback.mentorProfileUrl" :src="feedback.mentorProfileUrl" />
+                <span v-else>{{ feedback.mentorName?.charAt(0) }}</span>
+              </div>
+              <div class="reply-info">
+                <span class="reply-name">{{ feedback.mentorName }} 멘토님</span>
+                <span class="chat-time">{{ formatTimeAgo(feedback.commentReplyCreatedAt) }}</span>
+              </div>
+            </div>
+            <p class="chat-text">{{ feedback.commentReply }}</p>
+          </div>
         </div>
 
         <!-- Comment Section -->
-        <div class="comment-input-section">
+        <div class="comment-section-card">
           <h3 class="comment-label">COMMENT</h3>
           <template v-if="task.comment && !commentEditing">
-            <!-- 기존 코멘트 표시 -->
             <div class="comment-display">
               <p class="comment-display-text">{{ task.comment }}</p>
               <button class="comment-edit-btn" @click="startCommentEdit">수정</button>
             </div>
           </template>
           <template v-else>
-            <!-- 새 코멘트 입력 / 수정 -->
             <div class="comment-input-wrap">
               <textarea v-model="commentInput" class="comment-input"
                 placeholder="오늘 공부하며 궁금했던 점이나 멘토님께 전하고 싶은 말을 남겨보세요." />
@@ -116,7 +144,7 @@
     <!-- Toast Modal -->
     <Transition name="toast">
       <div v-if="showToast" class="toast-overlay" @click="showToast = false">
-        <div class="toast-card" @click.stop>
+        <div class="toast-card-modal" @click.stop>
           <div class="toast-icon-wrap">
             <CheckCircle :size="40" color="#34C759" />
           </div>
@@ -136,12 +164,14 @@ import SubjectTag from '@/components/common/SubjectTag.vue'
 import { getCookie } from '@/utils/cookie'
 import { getTaskDetail, uploadTaskImages, updateTaskComment } from '@/api/task/taskApi'
 import { getFeedbacks, getFeedbackDetail } from '@/api/feedback/feedbackApi'
+import { getGoals } from '@/api/mentoring/goalApi'
 
 const route = useRoute()
 const router = useRouter()
 
 const task = ref(null)
 const feedback = ref(null)
+const goalName = ref('')
 const loading = ref(true)
 const commentInput = ref('')
 const commentEditing = ref(false)
@@ -190,7 +220,6 @@ async function handleFileSelected(e) {
   uploading.value = true
   try {
     const { data } = await uploadTaskImages(Number(memberId), task.value.id, files)
-    // 업로드 후 이미지 반영
     if (!task.value.images) task.value.images = []
     task.value.images.push(...data)
   } catch (err) {
@@ -235,23 +264,38 @@ async function loadTask() {
     const { data } = await getTaskDetail(taskId)
     task.value = data
 
+    const memberId = getCookie('memberId')
+    if (!memberId) return
+
+    // goalName 조회 (goalId로 매칭)
+    if (data.goalId) {
+      try {
+        const goalsRes = await getGoals(memberId)
+        const goals = Array.isArray(goalsRes.data) ? goalsRes.data : (goalsRes.data?.content || [])
+        const matched = goals.find(g => g.goalId === data.goalId || g.id === data.goalId)
+        if (matched) goalName.value = matched.name || matched.goalName || ''
+      } catch (e) {
+        console.error('목표 로드 실패:', e)
+      }
+    }
+
     // 피드백 조회
-    if (data.hasFeedback) {
-      const memberId = getCookie('memberId')
-      if (memberId) {
-        try {
-          const feedbackRes = await getFeedbacks(memberId, 'TASK')
-          const list = feedbackRes.data || []
-          // taskId 또는 taskTitle로 매칭
-          const matched = list.find(f => f.taskId === data.id || f.taskTitle === data.title)
-          if (matched?.feedbackId) {
-            const detailRes = await getFeedbackDetail(matched.feedbackId)
-            feedback.value = detailRes.data
-          }
-        } catch (e) {
-          console.error('피드백 로드 실패:', e)
+    try {
+      const feedbackRes = await getFeedbacks(memberId, 'TASK')
+      const rawData = feedbackRes.data
+      const list = Array.isArray(rawData) ? rawData : (rawData?.content || rawData?.data || [])
+      for (const item of list) {
+        const fid = item.feedbackId || item.id
+        if (!fid) continue
+        const detailRes = await getFeedbackDetail(fid)
+        const detail = detailRes.data
+        if (detail?.taskId === data.id || detail?.taskId === Number(taskId)) {
+          feedback.value = detail
+          break
         }
       }
+    } catch (e) {
+      console.error('피드백 로드 실패:', e)
     }
   } catch (e) {
     console.error('과제 상세 로드 실패:', e)
@@ -266,7 +310,7 @@ onMounted(() => loadTask())
 <style scoped>
 .task-detail-page {
   padding: 0 20px 120px;
-  background: #fff;
+  background: #F5F5F5;
   min-height: 100vh;
 }
 
@@ -277,12 +321,15 @@ onMounted(() => loadTask())
   justify-content: center;
   position: relative;
   padding: 12px 0;
-  margin-bottom: 16px;
+  margin: 0 -20px 16px;
+  padding-left: 20px;
+  padding-right: 20px;
+  background: #fff;
 }
 
 .back-btn {
   position: absolute;
-  left: 0;
+  left: 20px;
   background: none;
   border: none;
   cursor: pointer;
@@ -300,16 +347,13 @@ onMounted(() => loadTask())
 
 /* Task Meta */
 .task-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 16px;
+  margin-bottom: 6px;
 }
 
 .meta-goal {
   font-size: 13px;
-  font-weight: 500;
-  color: #8E8E93;
+  font-weight: 600;
+  color: #0CA5FE;
 }
 
 .subject-tag {
@@ -318,11 +362,10 @@ onMounted(() => loadTask())
   font-weight: 700;
   padding: 3px 8px;
   border-radius: 50px;
-  width: fit-content;
 }
 
 .tag-etc {
-  background: #F3F4F6;
+  background: #E8E8E8;
   color: #6B7280;
 }
 
@@ -336,7 +379,7 @@ onMounted(() => loadTask())
   align-items: center;
   gap: 10px;
   background: #fff;
-  border: 1px solid #EBEBEB;
+  border: none;
   border-radius: 12px;
   padding: 14px 16px;
   cursor: pointer;
@@ -355,10 +398,10 @@ onMounted(() => loadTask())
 
 /* Description Card */
 .description-card {
-  background: #F3F4F6;
+  background: #fff;
   border-radius: 16px;
   padding: 20px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .description-text {
@@ -378,6 +421,9 @@ onMounted(() => loadTask())
   justify-content: center;
   padding: 48px 0;
   gap: 4px;
+  background: #fff;
+  border-radius: 20px;
+  margin-bottom: 16px;
 }
 
 .empty-cert-text {
@@ -389,7 +435,7 @@ onMounted(() => loadTask())
 
 /* Certification Images */
 .cert-images {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .cert-images-scroll {
@@ -412,21 +458,31 @@ onMounted(() => loadTask())
   cursor: pointer;
 }
 
-/* Feedback Section */
-.feedback-section {
-  margin-bottom: 24px;
+/* ===== 채팅형 피드백 영역 ===== */
+.chat-area {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
 }
 
+.chat-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 20px;
+}
+
+/* 멘토 피드백 카드 */
 .mentor-row {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .mentor-avatar {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: #E8E8E8;
   overflow: hidden;
@@ -454,7 +510,7 @@ onMounted(() => loadTask())
 }
 
 .mentor-name {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   color: #1A1A1A;
 }
@@ -462,6 +518,7 @@ onMounted(() => loadTask())
 .mentor-dept {
   font-size: 12px;
   color: #A6A6A6;
+  margin-top: 2px;
 }
 
 .great-badge {
@@ -470,12 +527,12 @@ onMounted(() => loadTask())
   color: #fff;
   font-size: 11px;
   font-weight: 800;
-  padding: 4px 12px;
+  padding: 5px 14px;
   border-radius: 50px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
-.feedback-text {
+.chat-text {
   font-size: 14px;
   color: #3D3D3D;
   line-height: 1.7;
@@ -483,45 +540,97 @@ onMounted(() => loadTask())
   white-space: pre-wrap;
 }
 
-.feedback-time {
+.chat-time {
   font-size: 12px;
   color: #C2C2C2;
+}
+
+.chat-time.right {
   display: block;
   text-align: right;
 }
 
-/* Comment Thread */
-.comment-thread {
-  margin-bottom: 24px;
+/* 멘티 코멘트 카드 */
+.student-card {
+  margin-left: 24px;
 }
 
-.comment-bubble {
-  border-radius: 16px;
-  padding: 16px;
-  margin-bottom: 12px;
+.student-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
 }
 
-.comment-bubble.student {
-  background: #F3F4F6;
+.student-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #E8E8E8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-.bubble-text {
-  font-size: 14px;
-  color: #3D3D3D;
-  line-height: 1.6;
-  margin: 0 0 6px;
-  white-space: pre-wrap;
+.student-avatar span {
+  font-size: 13px;
+  font-weight: 700;
+  color: #8E8E93;
 }
 
-.bubble-time {
-  font-size: 12px;
-  color: #C2C2C2;
-  display: block;
-  text-align: right;
+/* 멘토 답글 카드 */
+.mentor-reply-card {
+  margin-left: 24px;
 }
 
-/* Comment Input Section */
-.comment-input-section {
+.reply-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.reply-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #E8E8E8;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.reply-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.reply-avatar span {
+  font-size: 13px;
+  font-weight: 700;
+  color: #8E8E93;
+}
+
+.reply-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.reply-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1A1A1A;
+}
+
+/* ===== Comment Section ===== */
+.comment-section-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 20px;
   margin-bottom: 16px;
 }
 
@@ -529,7 +638,7 @@ onMounted(() => loadTask())
   font-size: 13px;
   font-weight: 800;
   color: #1A1A1A;
-  margin: 0 0 10px;
+  margin: 0 0 12px;
   letter-spacing: 0.5px;
 }
 
@@ -543,7 +652,7 @@ onMounted(() => loadTask())
   padding: 14px 16px;
   border-radius: 16px;
   border: 1px solid #EBEBEB;
-  background: #fff;
+  background: #F5F5F5;
   font-size: 13px;
   color: #3D3D3D;
   line-height: 1.5;
@@ -555,9 +664,8 @@ onMounted(() => loadTask())
   color: #C2C2C2;
 }
 
-/* Comment Display (기존 코멘트) */
 .comment-display {
-  background: #F3F4F6;
+  background: #F5F5F5;
   border-radius: 16px;
   padding: 16px;
   position: relative;
@@ -628,7 +736,7 @@ onMounted(() => loadTask())
   right: 0;
   padding: 16px 20px;
   padding-bottom: max(16px, env(safe-area-inset-bottom));
-  background: #fff;
+  background: #F5F5F5;
   z-index: 20;
 }
 
@@ -649,7 +757,8 @@ onMounted(() => loadTask())
 }
 
 .cert-btn.done {
-  background: #0CA5FE;
+  background: #B0B0B0;
+  cursor: default;
 }
 
 /* Loading / Empty */
@@ -700,7 +809,7 @@ onMounted(() => loadTask())
   padding: 20px;
 }
 
-.toast-card {
+.toast-card-modal {
   background: #fff;
   border-radius: 24px;
   padding: 36px 28px 28px;
@@ -737,26 +846,26 @@ onMounted(() => loadTask())
 .toast-enter-active {
   transition: opacity 0.2s ease;
 }
-.toast-enter-active .toast-card {
+.toast-enter-active .toast-card-modal {
   transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease;
 }
 .toast-leave-active {
   transition: opacity 0.15s ease;
 }
-.toast-leave-active .toast-card {
+.toast-leave-active .toast-card-modal {
   transition: transform 0.15s ease, opacity 0.15s ease;
 }
 .toast-enter-from {
   opacity: 0;
 }
-.toast-enter-from .toast-card {
+.toast-enter-from .toast-card-modal {
   transform: scale(0.85);
   opacity: 0;
 }
 .toast-leave-to {
   opacity: 0;
 }
-.toast-leave-to .toast-card {
+.toast-leave-to .toast-card-modal {
   transform: scale(0.9);
   opacity: 0;
 }
