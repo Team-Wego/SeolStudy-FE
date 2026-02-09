@@ -74,7 +74,7 @@
           <div class="task-list">
             <div v-for="task in assignmentTasks" :key="task.id" class="task-item" @click="goToTaskDetail(task.id)">
               <button class="task-checkbox" :class="{ checked: task.isChecked }" @click.stop="toggleTask(task)">
-                <Check v-if="task.isChecked" :size="14" color="#fff" />
+                <Check v-if="task.isChecked" :size="18" color="#fff" :stroke-width="3" />
               </button>
               <div class="task-info">
                 <span v-if="task.goalName" class="task-goal">{{ task.goalName }}</span>
@@ -99,7 +99,7 @@
           <div class="task-list">
             <div v-for="task in todoTasks" :key="task.id" class="task-item" @click="goToTaskDetail(task.id)">
               <button class="task-checkbox" :class="{ checked: task.isChecked }" @click.stop="toggleTask(task)">
-                <Check v-if="task.isChecked" :size="14" color="#fff" />
+                <Check v-if="task.isChecked" :size="18" color="#fff" :stroke-width="3" />
               </button>
               <div class="task-info">
                 <span class="task-title" :class="{ 'task-checked': task.isChecked }">{{ task.title }}</span>
@@ -612,20 +612,23 @@ onMounted(() => {
 .comment-card {
   background: #F3F4F6;
   border-radius: 16px;
-  padding: 16px 20px;
+  padding: 20px 20px 16px;
+  margin-top: 12px;
   margin-bottom: 24px;
   position: relative;
 }
 
 .comment-badge {
-  display: inline-block;
-  background: #0CA5FE;
+  position: absolute;
+  top: -10px;
+  left: 16px;
+  background: #34C759;
   color: #fff;
   font-size: 11px;
   font-weight: 700;
-  padding: 4px 10px;
+  padding: 5px 12px;
   border-radius: 50px;
-  margin-bottom: 8px;
+  z-index: 1;
 }
 
 .comment-text {
