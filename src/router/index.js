@@ -65,4 +65,15 @@ router.beforeEach((to, from) => {
   }
 })
 
+// 페이지 전환 시 body에 잔류하는 오버레이 정리
+router.afterEach((to) => {
+  if (to.name === 'Login') {
+    // Element Plus el-dialog 오버레이 제거
+    document.querySelectorAll('.el-overlay').forEach((el) => el.remove())
+    // body에 남은 팝업 스타일 초기화
+    document.body.style.overflow = ''
+    document.body.classList.remove('el-popup-parent--hidden')
+  }
+})
+
 export default router
