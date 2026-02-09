@@ -58,12 +58,20 @@
         <div v-else class="empty-text">학생이 작성한 코멘트가 없습니다.</div>
 
         <!-- 기존 플래너 피드백 표시 -->
-        <div v-if="existingPlannerFeedback" class="existing-feedback">
+        <div v-if="existingPlannerFeedback && !plannerEditing" class="existing-feedback">
           <p>{{ existingPlannerFeedback.content }}</p>
+          <div class="feedback-actions">
+            <button class="feedback-action-btn" @click="startPlannerEdit">
+              <Pencil :size="14" /> 수정
+            </button>
+            <button class="feedback-action-btn delete" @click="handlePlannerDelete">
+              <Trash2 :size="14" /> 삭제
+            </button>
+          </div>
         </div>
 
-        <!-- 피드백 입력 (기존 피드백이 없을 때만) -->
-        <template v-if="!existingPlannerFeedback">
+        <!-- 피드백 입력 / 수정 -->
+        <template v-if="!existingPlannerFeedback || plannerEditing">
           <textarea
             ref="plannerTextareaRef"
             v-model="plannerFeedbackText"
@@ -85,11 +93,18 @@
               <Highlighter :size="16" /> 형광펜
             </button>
             <button
+              v-if="plannerEditing"
+              class="feedback-cancel-btn"
+              @click="cancelPlannerEdit"
+            >
+              취소
+            </button>
+            <button
               class="feedback-submit-btn"
               :disabled="!plannerFeedbackText.trim() || plannerFeedbackSubmitting"
-              @click="handlePlannerFeedback"
+              @click="plannerEditing ? handlePlannerUpdate() : handlePlannerFeedback()"
             >
-              {{ plannerFeedbackSubmitting ? '등록 중...' : '피드백 등록하기' }}
+              {{ plannerFeedbackSubmitting ? '처리 중...' : (plannerEditing ? '수정 완료' : '피드백 등록하기') }}
             </button>
           </div>
         </template>
@@ -127,12 +142,20 @@
             <!-- 피드백 영역 -->
             <div class="task-feedback-area">
               <!-- 기존 피드백 표시 -->
-              <div v-if="detail.existingFeedback" class="existing-feedback">
+              <div v-if="detail.existingFeedback && !detail.editing" class="existing-feedback">
                 <p>{{ detail.existingFeedback.content }}</p>
+                <div class="feedback-actions">
+                  <button class="feedback-action-btn" @click="startTaskEdit(detail)">
+                    <Pencil :size="14" /> 수정
+                  </button>
+                  <button class="feedback-action-btn delete" @click="handleTaskDelete(detail)">
+                    <Trash2 :size="14" /> 삭제
+                  </button>
+                </div>
               </div>
 
-              <!-- 피드백 입력 (기존 피드백이 없을 때만) -->
-              <template v-if="!detail.existingFeedback">
+              <!-- 피드백 입력 / 수정 -->
+              <template v-if="!detail.existingFeedback || detail.editing">
                 <textarea
                   :ref="el => setTaskTextareaRef(el, detail.id)"
                   v-model="detail.feedbackText"
@@ -154,11 +177,18 @@
                     <Highlighter :size="16" /> 형광펜
                   </button>
                   <button
+                    v-if="detail.editing"
+                    class="feedback-cancel-btn"
+                    @click="cancelTaskEdit(detail)"
+                  >
+                    취소
+                  </button>
+                  <button
                     class="task-feedback-btn"
                     :disabled="!detail.feedbackText?.trim() || detail.submitting"
-                    @click="handleTaskFeedback(detail)"
+                    @click="detail.editing ? handleTaskUpdate(detail) : handleTaskFeedback(detail)"
                   >
-                    {{ detail.submitting ? '전송 중...' : '전송하기' }}
+                    {{ detail.submitting ? '처리 중...' : (detail.editing ? '수정 완료' : '전송하기') }}
                   </button>
                 </div>
               </template>
@@ -172,11 +202,11 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import { ChevronLeft, ChevronRight, Clock, ImageIcon, Highlighter, X } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, Clock, ImageIcon, Highlighter, X, Pencil, Trash2 } from 'lucide-vue-next'
 import SubjectTag from '@/components/common/SubjectTag.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import { getDailyTasks, getPlannerComment, getStudyTime, getTaskDetail } from '@/api/task/taskApi'
-import { getFeedbacks, createFeedback } from '@/api/feedback/feedbackApi'
+import { getFeedbacks, createFeedback, updateFeedback, deleteFeedback } from '@/api/feedback/feedbackApi'
 import { format, addDays, getDay } from 'date-fns'
 
 const props = defineProps({
@@ -195,6 +225,7 @@ const existingPlannerFeedback = ref(null)
 const plannerFeedbackText = ref('')
 const plannerFeedbackSubmitting = ref(false)
 const plannerHighlight = ref('')
+const plannerEditing = ref(false)
 const plannerTextareaRef = ref(null)
 const taskTextareaRefs = {}
 
@@ -286,6 +317,106 @@ async function handlePlannerFeedback() {
   }
 }
 
+function startPlannerEdit() {
+  plannerFeedbackText.value = existingPlannerFeedback.value.content
+  plannerHighlight.value = existingPlannerFeedback.value.highlight || ''
+  plannerEditing.value = true
+}
+
+function cancelPlannerEdit() {
+  plannerFeedbackText.value = ''
+  plannerHighlight.value = ''
+  plannerEditing.value = false
+}
+
+async function handlePlannerUpdate() {
+  if (!plannerFeedbackText.value.trim() || plannerFeedbackSubmitting.value) return
+  plannerFeedbackSubmitting.value = true
+  try {
+    const data = {
+      content: plannerFeedbackText.value.trim(),
+      highlight: plannerHighlight.value || null,
+      imageChanged: false,
+    }
+    await updateFeedback(existingPlannerFeedback.value.feedbackId, data)
+    existingPlannerFeedback.value = {
+      ...existingPlannerFeedback.value,
+      content: data.content,
+      highlight: data.highlight,
+    }
+    plannerFeedbackText.value = ''
+    plannerHighlight.value = ''
+    plannerEditing.value = false
+  } catch (e) {
+    console.error('플래너 피드백 수정 실패:', e)
+  } finally {
+    plannerFeedbackSubmitting.value = false
+  }
+}
+
+async function handlePlannerDelete() {
+  if (!confirm('피드백을 삭제하시겠습니까?')) return
+  try {
+    await deleteFeedback(existingPlannerFeedback.value.feedbackId)
+    existingPlannerFeedback.value = null
+    plannerFeedbackText.value = ''
+    plannerHighlight.value = ''
+    plannerEditing.value = false
+  } catch (e) {
+    console.error('플래너 피드백 삭제 실패:', e)
+  }
+}
+
+function startTaskEdit(detail) {
+  detail.feedbackText = detail.existingFeedback.content
+  detail.highlight = detail.existingFeedback.highlight || ''
+  detail.editing = true
+}
+
+function cancelTaskEdit(detail) {
+  detail.feedbackText = ''
+  detail.highlight = ''
+  detail.editing = false
+}
+
+async function handleTaskUpdate(detail) {
+  if (!detail.feedbackText?.trim() || detail.submitting) return
+  detail.submitting = true
+  try {
+    const data = {
+      content: detail.feedbackText.trim(),
+      highlight: detail.highlight || null,
+      imageChanged: false,
+    }
+    await updateFeedback(detail.existingFeedback.feedbackId, data)
+    detail.existingFeedback = {
+      ...detail.existingFeedback,
+      content: data.content,
+      highlight: data.highlight,
+    }
+    detail.feedbackText = ''
+    detail.highlight = ''
+    detail.editing = false
+  } catch (e) {
+    console.error('과제 피드백 수정 실패:', e)
+  } finally {
+    detail.submitting = false
+  }
+}
+
+async function handleTaskDelete(detail) {
+  if (!confirm('피드백을 삭제하시겠습니까?')) return
+  try {
+    await deleteFeedback(detail.existingFeedback.feedbackId)
+    detail.existingFeedback = null
+    detail.feedbackText = ''
+    detail.highlight = ''
+    detail.editing = false
+  } catch (e) {
+    console.error('과제 피드백 삭제 실패:', e)
+  }
+}
+
 async function handleTaskFeedback(detail) {
   if (!detail.feedbackText?.trim() || detail.submitting) return
   detail.submitting = true
@@ -330,8 +461,7 @@ async function fetchData() {
     // 해당 날짜의 플래너 피드백 찾기
     const plannerFbList = plannerFbRes?.data || []
     existingPlannerFeedback.value = plannerFbList.find((f) => {
-      const fbDate = f.createdAt?.substring(0, 10)
-      return fbDate === date
+      return f.targetDate === date
     }) || null
     plannerFeedbackText.value = ''
 
@@ -756,6 +886,58 @@ onMounted(() => {
 
 .highlight-remove-btn:hover {
   color: #f44336;
+}
+
+/* 피드백 수정/삭제 버튼 */
+.feedback-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  justify-content: flex-end;
+}
+
+.feedback-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  background: #fff;
+  color: #555;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.feedback-action-btn:hover {
+  background: #f5f5f5;
+}
+
+.feedback-action-btn.delete {
+  color: #e53935;
+  border-color: #ffcdd2;
+}
+
+.feedback-action-btn.delete:hover {
+  background: #ffebee;
+}
+
+.feedback-cancel-btn {
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+  background: #fff;
+  color: #666;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.feedback-cancel-btn:hover {
+  background: #f5f5f5;
 }
 
 /* 공통 */
