@@ -20,9 +20,11 @@
       </div>
     </template>
     <template v-else>
-      <div class="comment-card">
+      <div class="comment-card" :class="{ 'has-stamp': plannerComment?.completedAt }">
         <template v-if="plannerComment">
           <span class="comment-badge"> <img :src="star" alt="star" />오늘의 코멘트!</span>
+          <!-- 마감 스탬프 (코멘트 카드 우측 상단에 걸쳐서 배치) -->
+          <img v-if="plannerComment.completedAt" :src="stampImg" alt="마감 스탬프" class="stamp-img" />
           <div class="comment-content" :class="{ clickable: isCommentTruncated || commentExpanded }"
             @click="toggleComment">
             <p ref="commentTextRef" class="comment-text" :class="{ expanded: commentExpanded }">
@@ -44,6 +46,30 @@
         </template>
       </div>
     </template>
+
+    <!-- 플래너 마감 버튼 영역 -->
+    <div v-if="!loading && plannerComment && !plannerComment.completedAt" class="complete-row">
+      <button class="complete-btn" @click="showCompleteConfirm = true">
+        마감하기
+      </button>
+    </div>
+
+    <!-- 플래너 마감 확인 모달 -->
+    <Transition name="overlay">
+      <div v-if="showCompleteConfirm" class="menu-overlay" @click="showCompleteConfirm = false" />
+    </Transition>
+    <Transition name="popup">
+      <div v-if="showCompleteConfirm" class="fab-menu confirm-modal">
+        <p class="confirm-text">오늘의 플래너를 마감하시겠습니까?</p>
+        <div class="time-modal-actions">
+          <button class="time-modal-cancel" @click="showCompleteConfirm = false">취소</button>
+          <button class="time-modal-submit" :class="{ disabled: completeSubmitting }"
+            :disabled="completeSubmitting" @click="handleComplete">
+            {{ completeSubmitting ? '처리 중...' : '마감' }}
+          </button>
+        </div>
+      </div>
+    </Transition>
 
     <!-- 코멘트 등록/수정 모달 오버레이 -->
     <Transition name="overlay">
@@ -290,9 +316,10 @@ import { useRouter } from 'vue-router'
 import { ChevronLeft, ChevronRight, ChevronsRight, ChevronsLeft, Plus, Check, Edit3, Clock } from 'lucide-vue-next'
 import SubjectTag from '@/components/common/SubjectTag.vue'
 import { getCookie } from '@/utils/cookie'
-import { getDailyTasks, getPlannerComment, getStudyTime, updateTaskStatus, createStudyTime, getDailyStudyTimes, createPlannerComment, updatePlannerComment, deletePlannerComment } from '@/api/task/taskApi'
+import { getDailyTasks, getPlannerComment, getStudyTime, updateTaskStatus, createStudyTime, getDailyStudyTimes, createPlannerComment, updatePlannerComment, deletePlannerComment, completePlanner } from '@/api/task/taskApi'
 import { format, addDays, getDay } from 'date-fns'
 import star from '@/assets/icons/star.svg'
+import stampImg from '@/assets/images/stamp.png'
 
 const router = useRouter()
 
@@ -612,6 +639,27 @@ async function handleDeleteComment() {
   }
 }
 
+// ─── 플래너 마감 ───
+const showCompleteConfirm = ref(false)
+const completeSubmitting = ref(false)
+
+async function handleComplete() {
+  if (completeSubmitting.value || !plannerComment.value) return
+  const memberId = getCookie('memberId')
+  if (!memberId) return
+
+  completeSubmitting.value = true
+  try {
+    await completePlanner(Number(memberId), plannerComment.value.id)
+    showCompleteConfirm.value = false
+    await fetchData()
+  } catch (e) {
+    console.error('플래너 마감 실패:', e)
+  } finally {
+    completeSubmitting.value = false
+  }
+}
+
 watch(dateParam, () => {
   fetchData()
 })
@@ -735,6 +783,62 @@ onMounted(() => {
   padding: 4px 0;
   width: 100%;
   text-align: left;
+}
+
+/* 플래너 마감 */
+.complete-row {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+
+.complete-btn {
+  background: #36E27D;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  border: none;
+  border-radius: 50px;
+  padding: 8px 18px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.complete-btn:active {
+  background: #2bc96d;
+}
+
+.stamp-img {
+  position: absolute;
+  top: -40px;
+  right: -15px;
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  transform: rotate(10deg);
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* 스탬프가 있을 때 코멘트 카드 상단 여백 추가 */
+.comment-card.has-stamp {
+  padding-top: 28px;
+}
+
+.confirm-modal {
+  padding: 24px !important;
+  width: 300px;
+}
+
+.confirm-text {
+  font-size: 15px;
+  font-weight: 600;
+  color: #333;
+  text-align: center;
+  margin-bottom: 20px;
+  line-height: 1.5;
 }
 
 .comment-modal {
