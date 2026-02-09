@@ -5,7 +5,7 @@
       <!-- 로고 -->
       <div class="sidebar-logo">SeolStudy</div>
 
-      <!-- 멘토 프로필 -->
+      <!-- 멘토 프로필 + 알림 -->
       <div class="mentor-profile">
         <img
           v-if="mentorInfo.profileUrl"
@@ -19,6 +19,9 @@
         <div class="mentor-text">
           <span class="mentor-name">{{ mentorInfo.name || '' }} 멘토님</span>
           <span class="mentor-school">{{ mentorInfo.goalUniversity || '' }}</span>
+        </div>
+        <div class="mentor-noti">
+          <NotificationDropdown />
         </div>
       </div>
 
@@ -64,12 +67,15 @@
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { RouterView, RouterLink, useRoute, useRouter } from 'vue-router'
 import { LayoutDashboard, Users, MessageSquare, LogOut, User } from 'lucide-vue-next'
+import NotificationDropdown from '@/components/NotificationDropdown.vue'
 import { removeCookie, getCookie } from '@/utils/cookie'
 import { getMentorRooms } from '@/api/chat/chatApi'
 import { getMember } from '@/api/member/memberApi'
+import { useChatStore } from '@/stores/chatStore'
 
 const router = useRouter()
 const route = useRoute()
+const chatStore = useChatStore()
 
 const mentorInfo = ref({})
 
@@ -131,6 +137,7 @@ onUnmounted(() => {
 })
 
 function handleLogout() {
+  chatStore.reset()
   removeCookie('memberId')
   removeCookie('memberRole')
   removeCookie('memberName')
@@ -207,6 +214,16 @@ function handleLogout() {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.mentor-noti {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.mentor-noti :deep(.dropdown) {
+  right: auto;
+  left: 0;
 }
 
 .sidebar-divider {

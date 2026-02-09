@@ -158,7 +158,8 @@ const groupedNotifications = computed(() => {
 
   for (const group of chatGroups.values()) {
     if (group.count > 1) {
-      group.body = `${group.count}개의 새 메시지`
+      const name = group.data?.senderName || ''
+      group.body = name ? `${name}님의 새 메시지 ${group.count}개` : `${group.count}개의 새 메시지`
     }
   }
 
@@ -182,6 +183,9 @@ function getNavigationPath(item) {
 
   switch (item.type) {
     case 'CHAT':
+      if (item.data?.roomId) {
+        return `${prefix}/chat?roomId=${item.data.roomId}`
+      }
       return `${prefix}/chat`
     case 'TASK_REMINDER':
       return `${prefix}/home`

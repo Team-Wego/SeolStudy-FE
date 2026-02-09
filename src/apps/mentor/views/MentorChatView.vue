@@ -88,7 +88,8 @@
 </template>
 
 <script setup>
-import { ref, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, nextTick, onMounted, onUnmounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { Loading } from '@element-plus/icons-vue'
 import { FolderOpened } from '@element-plus/icons-vue'
 import { MessageSquare } from 'lucide-vue-next'
@@ -100,6 +101,7 @@ import ChatMessageList from '@/apps/mentee/components/chat/ChatMessageList.vue'
 import ChatInputBar from '@/apps/mentee/components/chat/ChatInputBar.vue'
 import ChatMediaGallery from '@/apps/mentee/components/chat/ChatMediaGallery.vue'
 
+const route = useRoute()
 const chatStore = useChatStore()
 const { connect, disconnect, subscribeRoom, enterRoom, sendMessage } = useChat()
 
@@ -208,8 +210,25 @@ function formatDate(dateStr) {
   return d.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })
 }
 
-onMounted(() => {
-  loadRooms()
+onMounted(async () => {
+  // 이전 세션 데이터 완전 초기화
+  chatStore.reset()
+  selectedRoomId.value = null
+  selectedMenteeName.value = ''
+  rooms.value = []
+  wsConnected = false
+
+  await loadRooms()
+
+  // 알림에서 roomId 쿼리 파라미터로 진입 시 해당 채팅방 자동 선택
+  const targetRoomId = route.query.roomId
+  if (targetRoomId) {
+    const targetRoom = rooms.value.find((r) => r.roomId === targetRoomId)
+    if (targetRoom) {
+      selectRoom(targetRoom)
+    }
+  }
+
   roomPollTimer = setInterval(loadRooms, ROOM_POLL_INTERVAL)
 })
 
