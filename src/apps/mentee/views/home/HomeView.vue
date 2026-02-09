@@ -12,27 +12,38 @@
     </div>
 
     <!-- Mentor Comment Card -->
-    <div class="comment-card">
-      <template v-if="plannerComment">
-        <span class="comment-badge">NEW 코멘트!</span>
-        <div class="comment-body">
-          <p ref="commentTextRef" class="comment-text" :class="{ expanded: commentExpanded }">
-            {{ plannerComment.comment }}
-          </p>
-          <button v-if="isCommentTruncated || commentExpanded" class="comment-more" @click="commentExpanded = !commentExpanded">
-            {{ commentExpanded ? '접기' : '더보기' }}
+    <template v-if="loading">
+      <div class="comment-card">
+        <div class="skeleton skeleton-text" style="width: 100px; height: 20px; margin-bottom: 12px;" />
+        <div class="skeleton skeleton-text" style="width: 100%; height: 16px; margin-bottom: 8px;" />
+        <div class="skeleton skeleton-text" style="width: 70%; height: 16px;" />
+      </div>
+    </template>
+    <template v-else>
+      <div class="comment-card">
+        <template v-if="plannerComment">
+          <span class="comment-badge"> <img :src="star" alt="star" />오늘의 코멘트!</span>
+          <div class="comment-content" :class="{ clickable: isCommentTruncated || commentExpanded }"
+            @click="toggleComment">
+            <p ref="commentTextRef" class="comment-text" :class="{ expanded: commentExpanded }">
+              {{ plannerComment.comment }}
+            </p>
+            <div class="comment-footer">
+              <span v-if="isCommentTruncated && !commentExpanded" class="comment-hint">더보기</span>
+              <span v-if="commentExpanded" class="comment-hint">접기</span>
+              <button class="comment-edit-icon" @click.stop="openCommentEdit">
+                <Edit3 :size="14" color="#8E8E93" />
+              </button>
+            </div>
+          </div>
+        </template>
+        <template v-else>
+          <button class="comment-add-btn" @click="openCommentCreate">
+            + 코멘트를 등록해보세요
           </button>
-        </div>
-        <button class="comment-edit-icon" @click="openCommentEdit">
-          <Edit3 :size="14" color="#8E8E93" />
-        </button>
-      </template>
-      <template v-else>
-        <button class="comment-add-btn" @click="openCommentCreate">
-          + 코멘트를 등록해보세요
-        </button>
-      </template>
-    </div>
+        </template>
+      </div>
+    </template>
 
     <!-- 코멘트 등록/수정 모달 오버레이 -->
     <Transition name="overlay">
@@ -54,10 +65,6 @@
 
     <!-- Toggle Row (한 줄 차지) -->
     <div class="toggle-row">
-      <button v-if="!showTimetable" class="add-task-btn" @click="goToTaskCreate">
-        할 일 추가
-        <Plus :size="14" color="#A6A6A6" />
-      </button>
       <button class="toggle-timetable-btn" @click="showTimetable = !showTimetable">
         <ChevronsRight v-if="showTimetable" :size="18" color="#C2C2C2" />
         <ChevronsLeft v-else :size="18" color="#C2C2C2" />
@@ -68,92 +75,120 @@
     <div class="planner-content">
       <!-- Task List Side -->
       <div class="task-side" :class="{ 'full-width': !showTimetable }">
-        <!-- Assignment Tasks (필수과제) -->
-        <div v-if="assignmentTasks.length > 0" class="task-section">
-          <span class="task-section-label">필수과제</span>
-          <div class="task-list">
-            <div v-for="task in assignmentTasks" :key="task.id" class="task-item" @click="goToTaskDetail(task.id)">
-              <button class="task-checkbox" :class="{ checked: task.isChecked }" @click.stop="toggleTask(task)">
-                <Check v-if="task.isChecked" :size="18" color="#fff" :stroke-width="3" />
-              </button>
-              <div class="task-info">
-                <span v-if="task.goalName" class="task-goal">{{ task.goalName }}</span>
-                <span class="task-title" :class="{ 'task-checked': task.isChecked }">{{ task.title }}</span>
-                <div class="task-tags">
-                  <SubjectTag v-if="subjectTagMap[task.subject]" :subject="subjectTagMap[task.subject]" size="sm" />
-                  <span v-else class="subject-tag tag-ETC">{{ subjectNameMap[task.subject] || task.subject }}</span>
-                  <span v-if="task.goalName" class="goal-tag">{{ task.goalName }}</span>
-                </div>
-              </div>
-              <span v-if="!showTimetable && task.totalMinutes" class="task-time">
-                {{ formatMinutes(task.totalMinutes) }}
-              </span>
-              <ChevronRight v-if="!showTimetable" :size="16" color="#C2C2C2" class="task-chevron" />
-            </div>
-          </div>
-        </div>
-
-        <!-- Todo Tasks (자율과제) -->
-        <div v-if="todoTasks.length > 0" class="task-section">
-          <span class="task-section-label">자율과제</span>
-          <div class="task-list">
-            <div v-for="task in todoTasks" :key="task.id" class="task-item" @click="goToTaskDetail(task.id)">
-              <button class="task-checkbox" :class="{ checked: task.isChecked }" @click.stop="toggleTask(task)">
-                <Check v-if="task.isChecked" :size="18" color="#fff" :stroke-width="3" />
-              </button>
-              <div class="task-info">
-                <span class="task-title" :class="{ 'task-checked': task.isChecked }">{{ task.title }}</span>
-                <div class="task-tags">
-                  <SubjectTag v-if="subjectTagMap[task.subject]" :subject="subjectTagMap[task.subject]" size="sm" />
-                  <span v-else class="subject-tag tag-ETC">{{ subjectNameMap[task.subject] || task.subject }}</span>
-                  <span v-if="task.goalName" class="goal-tag">{{ task.goalName }}</span>
-                </div>
-              </div>
-              <span v-if="!showTimetable && task.totalMinutes" class="task-time">
-                {{ formatMinutes(task.totalMinutes) }}
-              </span>
-              <ChevronRight v-if="!showTimetable" :size="16" color="#C2C2C2" class="task-chevron" />
-            </div>
-          </div>
-        </div>
-
-        <!-- Empty State -->
-        <div v-if="!loading && assignmentTasks.length === 0 && todoTasks.length === 0" class="empty-state">
-          <p>오늘 등록된 과제가 없습니다.</p>
-        </div>
-
         <!-- Skeleton Loading -->
         <template v-if="loading">
           <div class="task-section">
-            <div class="skeleton skeleton-text" style="width: 60px; height: 16px; margin-bottom: 12px;" />
-            <div v-for="i in 3" :key="i" class="task-item">
-              <div class="skeleton" style="width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;" />
+            <div class="skeleton skeleton-text" style="width: 60px; height: 28px; border-radius: 50px; margin-bottom: 12px;" />
+            <div v-for="i in 3" :key="'skel-a-'+i" class="task-item">
+              <div class="skeleton" style="width: 24px; height: 24px; border-radius: 4px; flex-shrink: 0;" />
               <div class="task-info">
-                <div class="skeleton skeleton-text" style="width: 140px; height: 14px;" />
-                <div class="skeleton skeleton-text" style="width: 80px; height: 12px;" />
+                <div class="skeleton skeleton-text" style="width: 120px; height: 14px;" />
+                <div class="skeleton skeleton-text" style="width: 60px; height: 12px;" />
               </div>
             </div>
+          </div>
+          <div class="task-section">
+            <div class="skeleton skeleton-text" style="width: 60px; height: 28px; border-radius: 50px; margin-bottom: 12px;" />
+            <div v-for="i in 2" :key="'skel-b-'+i" class="task-item">
+              <div class="skeleton" style="width: 24px; height: 24px; border-radius: 4px; flex-shrink: 0;" />
+              <div class="task-info">
+                <div class="skeleton skeleton-text" style="width: 100px; height: 14px;" />
+                <div class="skeleton skeleton-text" style="width: 50px; height: 12px;" />
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- Actual Content -->
+        <template v-else>
+          <!-- Assignment Tasks (필수과제) -->
+          <div v-if="assignmentTasks.length > 0" class="task-section">
+            <span class="task-section-label">필수과제</span>
+            <div class="task-list">
+              <div v-for="task in assignmentTasks" :key="task.id" class="task-item" @click="goToTaskDetail(task.id)">
+                <button class="task-checkbox" :class="{ checked: task.isChecked }" @click.stop="toggleTask(task)">
+                  <Check v-if="task.isChecked" :size="18" color="#fff" :stroke-width="3" />
+                </button>
+                <div class="task-info">
+                  <span class="task-title" :class="{ 'task-checked': task.isChecked }">{{ task.title }}</span>
+                  <div class="task-tags">
+                    <SubjectTag v-if="subjectTagMap[task.subject]" :subject="subjectTagMap[task.subject]" size="sm" />
+                    <span v-else class="subject-tag tag-ETC">{{ subjectNameMap[task.subject] || task.subject }}</span>
+                    <span v-if="task.goalName" class="goal-tag">{{ task.goalName }}</span>
+                  </div>
+                </div>
+                <span v-if="!showTimetable && task.totalMinutes" class="task-time">
+                  {{ formatMinutes(task.totalMinutes) }}
+                </span>
+                <ChevronRight v-if="!showTimetable" :size="16" color="#C2C2C2" class="task-chevron" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Todo Tasks (자율과제) -->
+          <div v-if="todoTasks.length > 0" class="task-section">
+            <span class="task-section-label">자율과제</span>
+            <div class="task-list">
+              <div v-for="task in todoTasks" :key="task.id" class="task-item" @click="goToTaskDetail(task.id)">
+                <button class="task-checkbox" :class="{ checked: task.isChecked }" @click.stop="toggleTask(task)">
+                  <Check v-if="task.isChecked" :size="18" color="#fff" :stroke-width="3" />
+                </button>
+                <div class="task-info">
+                  <span class="task-title" :class="{ 'task-checked': task.isChecked }">{{ task.title }}</span>
+                  <div class="task-tags">
+                    <SubjectTag v-if="subjectTagMap[task.subject]" :subject="subjectTagMap[task.subject]" size="sm" />
+                    <span v-else class="subject-tag tag-ETC">{{ subjectNameMap[task.subject] || task.subject }}</span>
+                    <span v-if="task.goalName" class="goal-tag">{{ task.goalName }}</span>
+                  </div>
+                </div>
+                <span v-if="!showTimetable && task.totalMinutes" class="task-time">
+                  {{ formatMinutes(task.totalMinutes) }}
+                </span>
+                <ChevronRight v-if="!showTimetable" :size="16" color="#C2C2C2" class="task-chevron" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Empty State -->
+          <div v-if="assignmentTasks.length === 0 && todoTasks.length === 0" class="empty-state">
+            <p>오늘 등록된 과제가 없습니다.</p>
           </div>
         </template>
       </div>
 
       <!-- Timetable Side (6열 격자 + 형광펜 블록) -->
       <div v-if="showTimetable" class="timetable-side">
-        <div class="timetable">
-          <div v-for="hour in timeSlots" :key="hour" class="time-row" :class="{ 'last-row': hour === 23 }">
-            <span class="time-label">{{ hour }}</span>
-            <div class="time-grid">
-              <div v-for="cell in 6" :key="cell" class="time-grid-cell" />
-              <!-- 이 행에 해당하는 형광펜 블록들 -->
-              <div v-for="(block, idx) in getRowBlocks(hour)" :key="idx" class="study-block"
-                :class="[`block-${block.subject}`]" :style="block.style" />
+        <!-- Timetable Skeleton -->
+        <template v-if="loading">
+          <div class="timetable">
+            <div v-for="hour in timeSlots" :key="'skel-t-'+hour" class="time-row" :class="{ 'last-row': hour === 23 }">
+              <span class="time-label">{{ hour }}</span>
+              <div class="time-grid">
+                <div v-for="cell in 6" :key="cell" class="time-grid-cell" />
+              </div>
+            </div>
+            <div class="time-row time-row-label-only">
+              <span class="time-label">24</span>
             </div>
           </div>
-          <!-- 24시 라벨만 표시 -->
-          <div class="time-row time-row-label-only">
-            <span class="time-label">24</span>
+        </template>
+        <template v-else>
+          <div class="timetable">
+            <div v-for="hour in timeSlots" :key="hour" class="time-row" :class="{ 'last-row': hour === 23 }">
+              <span class="time-label">{{ hour }}</span>
+              <div class="time-grid">
+                <div v-for="cell in 6" :key="cell" class="time-grid-cell" />
+                <!-- 이 행에 해당하는 형광펜 블록들 -->
+                <div v-for="(block, idx) in getRowBlocks(hour)" :key="idx" class="study-block"
+                  :class="[`block-${block.subject}`]" :style="block.style" />
+              </div>
+            </div>
+            <!-- 24시 라벨만 표시 -->
+            <div class="time-row time-row-label-only">
+              <span class="time-label">24</span>
+            </div>
           </div>
-        </div>
+        </template>
       </div>
     </div>
 
@@ -257,6 +292,7 @@ import SubjectTag from '@/components/common/SubjectTag.vue'
 import { getCookie } from '@/utils/cookie'
 import { getDailyTasks, getPlannerComment, getStudyTime, updateTaskStatus, createStudyTime, getDailyStudyTimes, createPlannerComment, updatePlannerComment, deletePlannerComment } from '@/api/task/taskApi'
 import { format, addDays, getDay } from 'date-fns'
+import star from '@/assets/icons/star.svg'
 
 const router = useRouter()
 
@@ -307,6 +343,12 @@ const assignmentTasks = computed(() =>
 const todoTasks = computed(() =>
   tasks.value.filter((t) => t.type === 'TODO').sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0))
 )
+
+function toggleComment() {
+  if (isCommentTruncated.value || commentExpanded.value) {
+    commentExpanded.value = !commentExpanded.value
+  }
+}
 
 function changeDate(offset) {
   currentDate.value = addDays(currentDate.value, offset)
@@ -491,7 +533,7 @@ async function fetchData() {
     tasks.value = tasksRes.data || []
     plannerComment.value = commentRes?.data || null
     studyTimes.value = studyTimeRes?.data?.studyTimes || []
-    await nextTick()
+    commentExpanded.value = false
     checkCommentTruncation()
   } catch (e) {
     console.error('Failed to fetch planner data:', e)
@@ -500,7 +542,10 @@ async function fetchData() {
   }
 }
 
-function checkCommentTruncation() {
+async function checkCommentTruncation() {
+  // v-if가 true로 바뀐 후 DOM 반영까지 2틱 대기
+  await nextTick()
+  await nextTick()
   const el = commentTextRef.value
   if (el) {
     isCommentTruncated.value = el.scrollHeight > el.clientHeight
@@ -578,7 +623,7 @@ onMounted(() => {
 
 <style scoped>
 .home-page {
-  padding: 16px 20px 100px;
+  padding: 16px 20px 80px;
   background: #fff;
   min-height: 100%;
 }
@@ -604,17 +649,16 @@ onMounted(() => {
 .date-title {
   font-size: 20px;
   font-weight: 800;
-  color: #1A1A1A;
   letter-spacing: -0.02em;
 }
 
 /* Comment Card */
 .comment-card {
-  background: #F3F4F6;
-  border-radius: 16px;
+  background: #F6F7F9;
+  border-radius: 12px;
   padding: 20px 20px 16px;
   margin-top: 12px;
-  margin-bottom: 24px;
+  margin-bottom: 12px;
   position: relative;
 }
 
@@ -622,17 +666,24 @@ onMounted(() => {
   position: absolute;
   top: -10px;
   left: 16px;
-  background: #34C759;
-  color: #fff;
-  font-size: 11px;
+  background: #36E27D;
+  color: black;
+  font-size: 10px;
   font-weight: 700;
-  padding: 5px 12px;
-  border-radius: 50px;
+  padding: 6px 8px;
+  border-radius: 10.5px;
+  display: flex;
   z-index: 1;
+  gap: 4px;
+}
+
+.comment-badge img {
+  width: 12px;
+  height: 12px;
 }
 
 .comment-text {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 500;
   color: #3D3D3D;
   line-height: 1.6;
@@ -646,52 +697,25 @@ onMounted(() => {
   -webkit-line-clamp: unset;
 }
 
-.comment-body {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-}
-
-.comment-more {
-  background: none;
-  border: none;
-  color: #8E8E93;
-  font-size: 12px;
-  font-weight: 600;
+.comment-content.clickable {
   cursor: pointer;
-  padding: 0;
-  flex-shrink: 0;
-  margin-top: 2px;
 }
 
-.comment-actions {
+.comment-footer {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
   gap: 12px;
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
-.comment-action-btn {
-  background: none;
-  border: none;
-  font-size: 13px;
+.comment-hint {
+  color: #8E8E93;
+  font-size: 14px;
   font-weight: 600;
-  cursor: pointer;
-  padding: 0;
-}
-
-.comment-action-btn.edit {
-  color: #0CA5FE;
-}
-
-.comment-action-btn.delete {
-  color: #FF3B30;
 }
 
 .comment-edit-icon {
-  position: absolute;
-  right: 16px;
-  bottom: 12px;
   background: none;
   border: none;
   cursor: pointer;
@@ -756,8 +780,8 @@ onMounted(() => {
   display: inline-block;
   font-size: 12px;
   font-weight: 700;
-  color: #8E8E93;
-  background: #F3F4F6;
+  color: #8A9093;
+  background: #F6F7F9;
   padding: 6px 12px;
   border-radius: 50px;
   margin-bottom: 12px;
@@ -777,10 +801,10 @@ onMounted(() => {
 }
 
 .task-checkbox {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  border: 2px solid #E5E5EA;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: 1px solid #E5E5EA;
   background: #fff;
   cursor: pointer;
   display: flex;
@@ -811,10 +835,13 @@ onMounted(() => {
 }
 
 .task-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   color: #1A1A1A;
   word-break: break-word;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .task-title.task-checked {
@@ -842,17 +869,17 @@ onMounted(() => {
 }
 
 .goal-tag {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
-  color: #A6A6A6;
+  color: #8E8E93;
 }
 
 .task-time {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
-  color: #8E8E93;
+  /* color: #8E8E93; */
   flex-shrink: 0;
-  margin-top: 4px;
+  /* margin-top: 4px; */
 }
 
 .task-chevron {
@@ -948,7 +975,7 @@ onMounted(() => {
   position: absolute;
   top: 2px;
   bottom: 2px;
-  border-radius: 20px;
+  border-radius: 7px;
   pointer-events: none;
   z-index: 1;
 }
