@@ -197,7 +197,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ChevronRight, User, Headphones, LogOut } from 'lucide-vue-next'
 import { removeCookie, getCookie } from '@/utils/cookie'
@@ -362,8 +362,9 @@ function goToSubject(subjectKey) {
   })
 }
 
-function handleLogout() {
+async function handleLogout() {
   showLogoutModal.value = false
+  await nextTick()
   chatStore.reset()
   removeCookie('memberId')
   removeCookie('memberRole')
