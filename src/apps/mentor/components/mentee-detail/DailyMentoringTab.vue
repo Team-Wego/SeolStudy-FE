@@ -57,18 +57,28 @@
         </div>
         <div v-else class="empty-text">학생이 작성한 코멘트가 없습니다.</div>
 
-        <textarea
-          v-model="plannerFeedbackText"
-          class="feedback-textarea"
-          placeholder="플래너에 대한 격려나 피드백을 남겨주세요."
-        />
-        <button
-          class="feedback-submit-btn"
-          :disabled="!plannerFeedbackText.trim() || plannerFeedbackSubmitting"
-          @click="handlePlannerFeedback"
-        >
-          {{ plannerFeedbackSubmitting ? '등록 중...' : '피드백 등록하기' }}
-        </button>
+        <!-- 기존 플래너 피드백 표시 -->
+        <div v-if="existingPlannerFeedback" class="existing-feedback">
+          <p>{{ existingPlannerFeedback.content }}</p>
+        </div>
+
+        <!-- 피드백 입력 (기존 피드백이 없을 때만) -->
+        <template v-if="!existingPlannerFeedback">
+          <textarea
+            v-model="plannerFeedbackText"
+            class="feedback-textarea"
+            placeholder="플래너에 대한 격려나 피드백을 남겨주세요."
+          />
+          <div class="feedback-btn-row">
+            <button
+              class="feedback-submit-btn"
+              :disabled="!plannerFeedbackText.trim() || plannerFeedbackSubmitting"
+              @click="handlePlannerFeedback"
+            >
+              {{ plannerFeedbackSubmitting ? '등록 중...' : '피드백 등록하기' }}
+            </button>
+          </div>
+        </template>
       </div>
 
       <!-- 과제 확인 및 피드백 -->
@@ -95,28 +105,35 @@
                 class="task-image"
                 @click="previewImage(img.url)"
               />
-              <div v-if="!detail.images?.length" class="image-placeholder">
-                <ImageIcon :size="32" color="#ccc" />
-              </div>
             </div>
             <div v-else class="image-placeholder">
               <ImageIcon :size="32" color="#ccc" />
             </div>
 
-            <!-- 피드백 입력 -->
+            <!-- 피드백 영역 -->
             <div class="task-feedback-area">
-              <textarea
-                v-model="detail.feedbackText"
-                class="feedback-textarea"
-                placeholder="학생의 질문에 대한 답변과 상세 피드백을 작성해주세요."
-              />
-              <button
-                class="task-feedback-btn"
-                :disabled="!detail.feedbackText?.trim() || detail.submitting"
-                @click="handleTaskFeedback(detail)"
-              >
-                {{ detail.submitting ? '전송 중...' : '전송하기' }}
-              </button>
+              <!-- 기존 피드백 표시 -->
+              <div v-if="detail.existingFeedback" class="existing-feedback">
+                <p>{{ detail.existingFeedback.content }}</p>
+              </div>
+
+              <!-- 피드백 입력 (기존 피드백이 없을 때만) -->
+              <template v-if="!detail.existingFeedback">
+                <textarea
+                  v-model="detail.feedbackText"
+                  class="feedback-textarea"
+                  placeholder="학생의 질문에 대한 답변과 상세 피드백을 작성해주세요."
+                />
+                <div class="feedback-btn-row">
+                  <button
+                    class="task-feedback-btn"
+                    :disabled="!detail.feedbackText?.trim() || detail.submitting"
+                    @click="handleTaskFeedback(detail)"
+                  >
+                    {{ detail.submitting ? '전송 중...' : '전송하기' }}
+                  </button>
+                </div>
+              </template>
             </div>
           </div>
         </div>
@@ -131,7 +148,7 @@ import { ChevronLeft, ChevronRight, Clock, ImageIcon } from 'lucide-vue-next'
 import SubjectTag from '@/components/common/SubjectTag.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import { getDailyTasks, getPlannerComment, getStudyTime, getTaskDetail } from '@/api/task/taskApi'
-import { createFeedback } from '@/api/feedback/feedbackApi'
+import { getFeedbacks, createFeedback } from '@/api/feedback/feedbackApi'
 import { format, addDays, getDay } from 'date-fns'
 
 const props = defineProps({
@@ -146,6 +163,7 @@ const studyTimeData = ref(null)
 const taskDetails = ref([])
 const submittedAt = ref('')
 
+const existingPlannerFeedback = ref(null)
 const plannerFeedbackText = ref('')
 const plannerFeedbackSubmitting = ref(false)
 
@@ -198,6 +216,7 @@ async function handlePlannerFeedback() {
       content: plannerFeedbackText.value.trim(),
       targetDate: dateParam.value,
     })
+    existingPlannerFeedback.value = { content: plannerFeedbackText.value.trim() }
     plannerFeedbackText.value = ''
   } catch (e) {
     console.error('플래너 피드백 등록 실패:', e)
@@ -217,6 +236,7 @@ async function handleTaskFeedback(detail) {
       content: detail.feedbackText.trim(),
       targetDate: dateParam.value,
     })
+    detail.existingFeedback = { content: detail.feedbackText.trim() }
     detail.feedbackText = ''
   } catch (e) {
     console.error('과제 피드백 등록 실패:', e)
@@ -231,15 +251,28 @@ async function fetchData() {
     const menteeId = Number(props.menteeId)
     const date = dateParam.value
 
-    const [tasksRes, commentRes, studyTimeRes] = await Promise.all([
+    const [tasksRes, commentRes, studyTimeRes, plannerFbRes, taskFbRes] = await Promise.all([
       getDailyTasks(menteeId, date),
       getPlannerComment(menteeId, date).catch(() => null),
       getStudyTime(menteeId, date).catch(() => null),
+      getFeedbacks(menteeId, 'PLANNER').catch(() => ({ data: [] })),
+      getFeedbacks(menteeId, 'TASK').catch(() => ({ data: [] })),
     ])
 
     tasks.value = tasksRes.data || []
     plannerComment.value = commentRes?.data || null
     studyTimeData.value = studyTimeRes?.data || null
+
+    // 해당 날짜의 플래너 피드백 찾기
+    const plannerFbList = plannerFbRes?.data || []
+    existingPlannerFeedback.value = plannerFbList.find((f) => {
+      const fbDate = f.createdAt?.substring(0, 10)
+      return fbDate === date
+    }) || null
+    plannerFeedbackText.value = ''
+
+    // 해당 날짜의 과제 피드백 목록
+    const taskFbList = taskFbRes?.data || []
 
     // 제출 시간 계산
     if (plannerComment.value?.createdAt) {
@@ -249,22 +282,28 @@ async function fetchData() {
       submittedAt.value = ''
     }
 
-    // 과제 상세 로드 (이미지, 코멘트 확인용)
+    // 과제 상세 로드 + 기존 피드백 매칭
     const detailPromises = tasks.value.map(async (task) => {
       try {
         const { data } = await getTaskDetail(task.id)
+        // 해당 과제에 대한 기존 피드백 찾기
+        const matched = taskFbList.find((f) => f.taskId === task.id)
         return {
           ...data,
+          existingFeedback: matched || null,
           feedbackText: '',
           submitting: false,
+          editing: false,
         }
       } catch {
         return {
           ...task,
           images: [],
           comment: '',
+          existingFeedback: null,
           feedbackText: '',
           submitting: false,
+          editing: false,
         }
       }
     })
@@ -459,6 +498,23 @@ onMounted(() => {
   white-space: pre-wrap;
 }
 
+/* 기존 피드백 표시 */
+.existing-feedback {
+  background: #eef8ff;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  position: relative;
+}
+
+.existing-feedback p {
+  font-size: 14px;
+  color: #333;
+  line-height: 1.7;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
 /* 피드백 입력 */
 .feedback-textarea {
   width: 100%;
@@ -478,10 +534,14 @@ onMounted(() => {
   color: #bbb;
 }
 
-.feedback-submit-btn {
-  display: block;
-  width: 100%;
+.feedback-btn-row {
+  display: flex;
+  gap: 8px;
   margin-top: 12px;
+}
+
+.feedback-submit-btn {
+  flex: 2;
   padding: 14px;
   border-radius: 12px;
   border: none;
@@ -557,8 +617,7 @@ onMounted(() => {
 }
 
 .task-feedback-btn {
-  align-self: stretch;
-  margin-top: 10px;
+  flex: 2;
   padding: 12px;
   border-radius: 12px;
   border: none;

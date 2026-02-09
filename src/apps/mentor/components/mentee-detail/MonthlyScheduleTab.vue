@@ -80,18 +80,20 @@
         <div v-if="activeWeekFeedback" class="existing-feedback">
           <p>{{ activeWeekFeedback.content }}</p>
         </div>
-        <textarea
-          v-model="weeklyFeedbackText"
-          class="feedback-textarea"
-          :placeholder="activeWeekFeedbackPlaceholder"
-        />
-        <button
-          class="feedback-submit-btn"
-          :disabled="!weeklyFeedbackText.trim() || weeklySubmitting"
-          @click="handleWeeklyFeedback"
-        >
-          {{ weeklySubmitting ? '등록 중...' : '등록하기' }}
-        </button>
+        <template v-else>
+          <textarea
+            v-model="weeklyFeedbackText"
+            class="feedback-textarea"
+            :placeholder="activeWeekFeedbackPlaceholder"
+          />
+          <button
+            class="feedback-submit-btn"
+            :disabled="!weeklyFeedbackText.trim() || weeklySubmitting"
+            @click="handleWeeklyFeedback"
+          >
+            {{ weeklySubmitting ? '등록 중...' : '등록하기' }}
+          </button>
+        </template>
       </div>
     </div>
 
@@ -102,18 +104,20 @@
       <div v-if="monthlyFeedback" class="existing-feedback">
         <p>{{ monthlyFeedback.content }}</p>
       </div>
-      <textarea
-        v-model="monthlyFeedbackText"
-        class="feedback-textarea"
-        placeholder="이번 달 학생의 전반적인 성취도와 다음 달 방향성을 작성해주세요."
-      />
-      <button
-        class="feedback-submit-btn"
-        :disabled="!monthlyFeedbackText.trim() || monthlySubmitting"
-        @click="handleMonthlyFeedback"
-      >
-        {{ monthlySubmitting ? '등록 중...' : '등록하기' }}
-      </button>
+      <template v-else>
+        <textarea
+          v-model="monthlyFeedbackText"
+          class="feedback-textarea"
+          placeholder="이번 달 학생의 전반적인 성취도와 다음 달 방향성을 작성해주세요."
+        />
+        <button
+          class="feedback-submit-btn"
+          :disabled="!monthlyFeedbackText.trim() || monthlySubmitting"
+          @click="handleMonthlyFeedback"
+        >
+          {{ monthlySubmitting ? '등록 중...' : '등록하기' }}
+        </button>
+      </template>
     </div>
 
     <!-- 과제 등록 모달 -->
