@@ -23,21 +23,14 @@
             오늘 등록된 과제가 없습니다.
           </div>
           <div v-for="task in tasks" :key="task.id" class="task-row">
-            <SubjectTag
-              v-if="subjectTagMap[task.subject]"
-              :subject="subjectTagMap[task.subject]"
-              size="sm"
-            />
+            <SubjectTag v-if="subjectTagMap[task.subject]" :subject="subjectTagMap[task.subject]" size="sm" />
             <span v-else class="subject-tag-etc">{{ subjectNameMap[task.subject] || task.subject }}</span>
             <div class="task-info">
               <span class="task-goal">{{ task.goalName || '' }}</span>
               <span class="task-title">{{ task.title }}</span>
             </div>
             <span class="task-time">{{ formatTaskTime(task.totalMinutes) }}</span>
-            <StatusBadge
-              :type="task.isChecked ? 'complete' : 'incomplete'"
-              size="sm"
-            />
+            <StatusBadge :type="task.isChecked ? 'complete' : 'incomplete'" size="sm" />
           </div>
         </div>
 
@@ -51,7 +44,7 @@
 
       <!-- 코멘트/질문 섹션 -->
       <div class="section-card">
-        <h3 class="section-title">코멘트 /질문 🧑‍🎓</h3>
+        <h3 class="section-title">플래너 코멘트 & 피드백 남기기</h3>
         <div v-if="plannerComment" class="student-comment">
           <p>{{ plannerComment.comment }}</p>
         </div>
@@ -59,7 +52,7 @@
 
         <!-- 기존 플래너 피드백 표시 -->
         <div v-if="existingPlannerFeedback && !plannerEditing" class="existing-feedback">
-          <p>{{ existingPlannerFeedback.content }}</p>
+          <p v-html="renderHighlightedText(existingPlannerFeedback.content, existingPlannerFeedback.highlight)"></p>
           <div class="feedback-actions">
             <button class="feedback-action-btn" @click="startPlannerEdit">
               <Pencil :size="14" /> 수정
@@ -72,12 +65,8 @@
 
         <!-- 피드백 입력 / 수정 -->
         <template v-if="!existingPlannerFeedback || plannerEditing">
-          <textarea
-            ref="plannerTextareaRef"
-            v-model="plannerFeedbackText"
-            class="feedback-textarea"
-            placeholder="플래너에 대한 격려나 피드백을 남겨주세요."
-          />
+          <textarea ref="plannerTextareaRef" v-model="plannerFeedbackText" class="feedback-textarea"
+            placeholder="플래너에 대한 격려나 피드백을 남겨주세요." />
           <div v-if="plannerHighlight" class="highlight-preview">
             <Highlighter :size="12" color="#f9a825" />
             <span class="highlight-preview-text">{{ plannerHighlight }}</span>
@@ -86,24 +75,14 @@
             </button>
           </div>
           <div class="feedback-btn-row">
-            <button
-              class="highlight-btn"
-              @click="applyPlannerHighlight"
-            >
+            <button class="highlight-btn" @click="applyPlannerHighlight">
               <Highlighter :size="16" /> 형광펜
             </button>
-            <button
-              v-if="plannerEditing"
-              class="feedback-cancel-btn"
-              @click="cancelPlannerEdit"
-            >
+            <button v-if="plannerEditing" class="feedback-cancel-btn" @click="cancelPlannerEdit">
               취소
             </button>
-            <button
-              class="feedback-submit-btn"
-              :disabled="!plannerFeedbackText.trim() || plannerFeedbackSubmitting"
-              @click="plannerEditing ? handlePlannerUpdate() : handlePlannerFeedback()"
-            >
+            <button class="feedback-submit-btn" :disabled="!plannerFeedbackText.trim() || plannerFeedbackSubmitting"
+              @click="plannerEditing ? handlePlannerUpdate() : handlePlannerFeedback()">
               {{ plannerFeedbackSubmitting ? '처리 중...' : (plannerEditing ? '수정 완료' : '피드백 등록하기') }}
             </button>
           </div>
@@ -113,7 +92,7 @@
       <!-- 과제 확인 및 피드백 -->
       <div class="section-card">
         <div class="section-title-row">
-          <h3 class="section-title">과제 확인 및 피드백 ✅</h3>
+          <h3 class="section-title">과제 확인 및 피드백</h3>
           <span v-if="submittedAt" class="submitted-time">{{ submittedAt }}</span>
         </div>
 
@@ -122,77 +101,83 @@
         </div>
 
         <div v-for="detail in taskDetails" :key="detail.id" class="task-detail-card">
-          <h4 class="task-detail-title">{{ detail.title }}</h4>
+          <!-- 제목 + 인증 상태 -->
+          <div class="task-detail-header">
+            <h4 class="task-detail-title">{{ detail.title }}</h4>
+            <span class="verification-badge" :class="detail.submittedAt ? 'verified' : 'unverified'">
+              {{ detail.submittedAt ? '인증 완료' : '미인증' }}
+            </span>
+          </div>
 
-          <div class="task-detail-content">
-            <!-- 이미지 -->
-            <div v-if="detail.images?.length" class="task-images">
-              <img
-                v-for="img in detail.images"
-                :key="img.id"
-                :src="img.url"
-                class="task-image"
-                @click="previewImage(img.url)"
-              />
+          <!-- 학습지 파일 -->
+          <div v-if="detail.worksheetFiles?.length" class="worksheet-section">
+            <h5 class="sub-section-title">학습지</h5>
+            <div class="worksheet-list">
+              <a v-for="file in detail.worksheetFiles" :key="file.id" :href="file.url" target="_blank"
+                class="worksheet-item">
+                <FileText :size="16" color="#5bb8f6" />
+                <span class="worksheet-name">{{ file.name }}</span>
+                <span class="worksheet-size">{{ formatFileSize(file.size) }}</span>
+                <Download :size="14" color="#999" />
+              </a>
             </div>
-            <div v-else class="image-placeholder">
-              <ImageIcon :size="32" color="#ccc" />
-            </div>
+          </div>
 
-            <!-- 피드백 영역 -->
-            <div class="task-feedback-area">
-              <!-- 기존 피드백 표시 -->
-              <div v-if="detail.existingFeedback && !detail.editing" class="existing-feedback">
-                <p>{{ detail.existingFeedback.content }}</p>
-                <div class="feedback-actions">
-                  <button class="feedback-action-btn" @click="startTaskEdit(detail)">
-                    <Pencil :size="14" /> 수정
-                  </button>
-                  <button class="feedback-action-btn delete" @click="handleTaskDelete(detail)">
-                    <Trash2 :size="14" /> 삭제
-                  </button>
-                </div>
+          <!-- 과제 인증 (학생 제출) -->
+          <div class="submission-section">
+            <h5 class="sub-section-title">과제 인증</h5>
+            <div v-if="detail.images?.length || detail.comment" class="submission-content">
+              <div v-if="detail.images?.length" class="task-images">
+                <img v-for="img in detail.images" :key="img.id" :src="img.url" class="task-image"
+                  @click="previewImage(img.url)" />
               </div>
-
-              <!-- 피드백 입력 / 수정 -->
-              <template v-if="!detail.existingFeedback || detail.editing">
-                <textarea
-                  :ref="el => setTaskTextareaRef(el, detail.id)"
-                  v-model="detail.feedbackText"
-                  class="feedback-textarea"
-                  placeholder="학생의 질문에 대한 답변과 상세 피드백을 작성해주세요."
-                />
-                <div v-if="detail.highlight" class="highlight-preview">
-                  <Highlighter :size="12" color="#f9a825" />
-                  <span class="highlight-preview-text">{{ detail.highlight }}</span>
-                  <button class="highlight-remove-btn" @click="detail.highlight = ''">
-                    <X :size="12" />
-                  </button>
-                </div>
-                <div class="feedback-btn-row">
-                  <button
-                    class="highlight-btn"
-                    @click="applyTaskHighlight(detail)"
-                  >
-                    <Highlighter :size="16" /> 형광펜
-                  </button>
-                  <button
-                    v-if="detail.editing"
-                    class="feedback-cancel-btn"
-                    @click="cancelTaskEdit(detail)"
-                  >
-                    취소
-                  </button>
-                  <button
-                    class="task-feedback-btn"
-                    :disabled="!detail.feedbackText?.trim() || detail.submitting"
-                    @click="detail.editing ? handleTaskUpdate(detail) : handleTaskFeedback(detail)"
-                  >
-                    {{ detail.submitting ? '처리 중...' : (detail.editing ? '수정 완료' : '전송하기') }}
-                  </button>
-                </div>
-              </template>
+              <div v-if="detail.comment" class="student-task-comment">
+                <p>{{ detail.comment }}</p>
+              </div>
             </div>
+            <div v-else class="empty-text small">과제 인증이 없습니다.</div>
+          </div>
+
+          <!-- 멘토 피드백 -->
+          <div class="task-feedback-area">
+            <h5 class="sub-section-title">멘토 피드백</h5>
+            <!-- 기존 피드백 표시 -->
+            <div v-if="detail.existingFeedback && !detail.editing" class="existing-feedback">
+              <p v-html="renderHighlightedText(detail.existingFeedback.content, detail.existingFeedback.highlight)"></p>
+              <div class="feedback-actions">
+                <button class="feedback-action-btn" @click="startTaskEdit(detail)">
+                  <Pencil :size="14" /> 수정
+                </button>
+                <button class="feedback-action-btn delete" @click="handleTaskDelete(detail)">
+                  <Trash2 :size="14" /> 삭제
+                </button>
+              </div>
+            </div>
+
+            <!-- 피드백 입력 / 수정 -->
+            <template v-if="!detail.existingFeedback || detail.editing">
+              <textarea :ref="el => setTaskTextareaRef(el, detail.id)" v-model="detail.feedbackText"
+                class="feedback-textarea" placeholder="학생의 질문에 대한 답변과 상세 피드백을 작성해주세요." />
+              <div v-if="detail.highlight" class="highlight-preview">
+                <Highlighter :size="12" color="#f9a825" />
+                <span class="highlight-preview-text">{{ detail.highlight }}</span>
+                <button class="highlight-remove-btn" @click="detail.highlight = ''">
+                  <X :size="12" />
+                </button>
+              </div>
+              <div class="feedback-btn-row">
+                <button class="highlight-btn" @click="applyTaskHighlight(detail)">
+                  <Highlighter :size="16" /> 형광펜
+                </button>
+                <button v-if="detail.editing" class="feedback-cancel-btn" @click="cancelTaskEdit(detail)">
+                  취소
+                </button>
+                <button class="task-feedback-btn" :disabled="!detail.feedbackText?.trim() || detail.submitting"
+                  @click="detail.editing ? handleTaskUpdate(detail) : handleTaskFeedback(detail)">
+                  {{ detail.submitting ? '처리 중...' : (detail.editing ? '수정 완료' : '전송하기') }}
+                </button>
+              </div>
+            </template>
           </div>
         </div>
       </div>
@@ -202,7 +187,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import { ChevronLeft, ChevronRight, Clock, ImageIcon, Highlighter, X, Pencil, Trash2 } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, Clock, Highlighter, X, Pencil, Trash2, FileText, Download } from 'lucide-vue-next'
 import SubjectTag from '@/components/common/SubjectTag.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import { getDailyTasks, getPlannerComment, getStudyTime, getTaskDetail } from '@/api/task/taskApi'
@@ -293,6 +278,24 @@ function changeDate(offset) {
 
 function previewImage(url) {
   if (url) window.open(url, '_blank')
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
+function renderHighlightedText(content, highlight) {
+  if (!content) return ''
+  const escaped = escapeHtml(content)
+  if (!highlight) return escaped
+  const escapedHighlight = escapeHtml(highlight)
+  return escaped.split(escapedHighlight).join(`<span class="highlight-mark">${escapedHighlight}</span>`)
+}
+
+function formatFileSize(sizeMB) {
+  if (!sizeMB) return ''
+  if (sizeMB < 1) return `${Math.round(sizeMB * 1024)}KB`
+  return `${sizeMB.toFixed(1)}MB`
 }
 
 async function handlePlannerFeedback() {
@@ -669,7 +672,7 @@ onMounted(() => {
 }
 
 .section-title {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 800;
   color: #1a1a1a;
   margin: 0 0 16px;
@@ -760,7 +763,7 @@ onMounted(() => {
 .task-detail-card {
   margin-bottom: 24px;
   padding-bottom: 24px;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid #dddddd;
 }
 
 .task-detail-card:last-child {
@@ -769,47 +772,136 @@ onMounted(() => {
   border-bottom: none;
 }
 
+.task-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
 .task-detail-title {
   font-size: 15px;
   font-weight: 700;
   color: #1a1a1a;
-  margin: 0 0 14px;
+  margin: 0;
 }
 
-.task-detail-content {
+.verification-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.verification-badge.verified {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.verification-badge.unverified {
+  background: #f3f4f6;
+  color: #9e9e9e;
+}
+
+/* 서브 섹션 */
+.sub-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #666;
+  margin: 0 0 8px;
+}
+
+/* 학습지 파일 */
+.worksheet-section {
+  margin-bottom: 16px;
+}
+
+.worksheet-list {
   display: flex;
-  gap: 16px;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.worksheet-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border: 1px solid #e8ecf1;
+  border-radius: 10px;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s;
+}
+
+.worksheet-item:hover {
+  background: #eef3f8;
+}
+
+.worksheet-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.worksheet-size {
+  font-size: 12px;
+  color: #999;
+  flex-shrink: 0;
+}
+
+/* 과제 인증 */
+.submission-section {
+  margin-bottom: 16px;
+}
+
+.submission-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .task-images {
   display: flex;
-  flex-direction: column;
   gap: 8px;
-  flex-shrink: 0;
-  width: 180px;
+  flex-wrap: wrap;
 }
 
 .task-image {
-  width: 180px;
-  height: 140px;
+  width: 140px;
+  height: 110px;
   object-fit: cover;
-  border-radius: 12px;
+  border-radius: 10px;
   cursor: pointer;
+  transition: opacity 0.15s;
 }
 
-.image-placeholder {
-  width: 180px;
-  height: 140px;
-  background: #f5f5f5;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+.task-image:hover {
+  opacity: 0.85;
 }
 
+.student-task-comment {
+  background: #f6f7f9;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.student-task-comment p {
+  font-size: 13px;
+  color: #3d3d3d;
+  line-height: 1.6;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+/* 멘토 피드백 */
 .task-feedback-area {
-  flex: 1;
   display: flex;
   flex-direction: column;
 }
@@ -940,6 +1032,14 @@ onMounted(() => {
   background: #f5f5f5;
 }
 
+/* 형광펜 렌더링 */
+:deep(.highlight-mark) {
+  background-color: #fff59d;
+  border-radius: 2px;
+  padding: 0px 1px;
+  box-decoration-break: clone;
+}
+
 /* 공통 */
 .loading-text,
 .empty-text {
@@ -947,5 +1047,10 @@ onMounted(() => {
   color: #999;
   font-size: 14px;
   padding: 40px 0;
+}
+
+.empty-text.small {
+  padding: 16px 0;
+  font-size: 13px;
 }
 </style>
