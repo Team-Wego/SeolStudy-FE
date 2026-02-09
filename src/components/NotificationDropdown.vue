@@ -35,6 +35,7 @@
                 <MessageSquareText v-if="item.type === 'CHAT'" :size="16" color="#0CA5FE" />
                 <ClipboardCheck v-else-if="item.type === 'TASK_REMINDER'" :size="16" color="#FF9500" />
                 <MessageCircle v-else-if="item.type === 'FEEDBACK'" :size="16" color="#34C759" />
+                <CheckCircle v-else-if="item.type === 'PLANNER_COMPLETED'" :size="16" color="#36E27D" />
                 <BellRing v-else :size="16" color="#666" />
               </div>
               <div class="noti-content">
@@ -59,7 +60,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Bell, BellRing, MessageSquareText, ClipboardCheck, MessageCircle, X } from 'lucide-vue-next'
+import { Bell, BellRing, MessageSquareText, ClipboardCheck, MessageCircle, CheckCircle, X } from 'lucide-vue-next'
 import { getCookie } from '@/utils/cookie'
 import {
   getNotifications,
@@ -194,6 +195,11 @@ function getNavigationPath(item) {
         return `${prefix}/feedback/${item.data.feedbackId}`
       }
       return `${prefix}/feedback`
+    case 'PLANNER_COMPLETED':
+      if (item.data?.menteeId) {
+        return `${prefix}/home`
+      }
+      return `${prefix}/home`
     default:
       return null
   }

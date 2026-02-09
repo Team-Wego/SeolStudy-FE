@@ -79,6 +79,10 @@ export function deletePlannerComment(menteeId, plannerId) {
     return api.delete(`/mentees/${menteeId}/planner-comments/${plannerId}`);
 }
 
+export function completePlanner(menteeId, plannerId) {
+    return api.patch(`/mentees/${menteeId}/planner-comments/${plannerId}/complete`);
+}
+
 export function getTaskDetail(taskId) {
     return api.get(`/tasks/${taskId}`);
 }
