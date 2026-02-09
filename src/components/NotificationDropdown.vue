@@ -189,6 +189,9 @@ function getNavigationPath(item) {
       }
       return `${prefix}/chat`
     case 'TASK_REMINDER':
+      if (item.data?.date) {
+        return `${prefix}/home?date=${item.data.date}`
+      }
       return `${prefix}/home`
     case 'FEEDBACK':
       if (item.data?.feedbackId) {
@@ -196,8 +199,8 @@ function getNavigationPath(item) {
       }
       return `${prefix}/feedback`
     case 'PLANNER_COMPLETED':
-      if (item.data?.menteeId) {
-        return `${prefix}/home`
+      if (item.data?.date) {
+        return `${prefix}/home?date=${item.data.date}`
       }
       return `${prefix}/home`
     default:

@@ -312,7 +312,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { ChevronLeft, ChevronRight, ChevronsRight, ChevronsLeft, Plus, Check, Edit3, Clock } from 'lucide-vue-next'
 import SubjectTag from '@/components/common/SubjectTag.vue'
 import { getCookie } from '@/utils/cookie'
@@ -322,8 +322,11 @@ import star from '@/assets/icons/star.svg'
 import stampImg from '@/assets/images/stamp.png'
 
 const router = useRouter()
+const route = useRoute()
 
-const currentDate = ref(new Date())
+// 알림 등에서 ?date=YYYY-MM-DD 쿼리로 특정 날짜 플래너 이동 지원
+const initialDate = route.query.date ? new Date(route.query.date + 'T00:00:00') : new Date()
+const currentDate = ref(initialDate)
 const loading = ref(true)
 const showTimetable = ref(true)
 const showMenu = ref(false)
@@ -662,6 +665,13 @@ async function handleComplete() {
 
 watch(dateParam, () => {
   fetchData()
+})
+
+// 알림 클릭 등으로 ?date= 쿼리가 변경되면 해당 날짜로 이동
+watch(() => route.query.date, (newDate) => {
+  if (newDate) {
+    currentDate.value = new Date(newDate + 'T00:00:00')
+  }
 })
 
 onMounted(() => {
