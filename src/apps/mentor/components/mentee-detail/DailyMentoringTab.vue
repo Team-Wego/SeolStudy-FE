@@ -64,22 +64,12 @@
 
         <!-- 피드백 입력 (기존 피드백이 없을 때만) -->
         <template v-if="!existingPlannerFeedback">
-          <div class="textarea-wrapper">
-            <textarea
-              ref="plannerTextareaRef"
-              v-model="plannerFeedbackText"
-              class="feedback-textarea"
-              placeholder="플래너에 대한 격려나 피드백을 남겨주세요."
-              @mouseup="handlePlannerSelection"
-            />
-            <button
-              v-if="plannerShowHighlightBtn"
-              class="highlight-float-btn"
-              @mousedown.prevent="applyPlannerHighlight"
-            >
-              <Highlighter :size="14" /> 형광펜
-            </button>
-          </div>
+          <textarea
+            ref="plannerTextareaRef"
+            v-model="plannerFeedbackText"
+            class="feedback-textarea"
+            placeholder="플래너에 대한 격려나 피드백을 남겨주세요."
+          />
           <div v-if="plannerHighlight" class="highlight-preview">
             <Highlighter :size="12" color="#f9a825" />
             <span class="highlight-preview-text">{{ plannerHighlight }}</span>
@@ -88,6 +78,12 @@
             </button>
           </div>
           <div class="feedback-btn-row">
+            <button
+              class="highlight-btn"
+              @click="applyPlannerHighlight"
+            >
+              <Highlighter :size="16" /> 형광펜
+            </button>
             <button
               class="feedback-submit-btn"
               :disabled="!plannerFeedbackText.trim() || plannerFeedbackSubmitting"
@@ -137,22 +133,12 @@
 
               <!-- 피드백 입력 (기존 피드백이 없을 때만) -->
               <template v-if="!detail.existingFeedback">
-                <div class="textarea-wrapper">
-                  <textarea
-                    :ref="el => setTaskTextareaRef(el, detail.id)"
-                    v-model="detail.feedbackText"
-                    class="feedback-textarea"
-                    placeholder="학생의 질문에 대한 답변과 상세 피드백을 작성해주세요."
-                    @mouseup="handleTaskSelection(detail)"
-                  />
-                  <button
-                    v-if="detail.showHighlightBtn"
-                    class="highlight-float-btn"
-                    @mousedown.prevent="applyTaskHighlight(detail)"
-                  >
-                    <Highlighter :size="14" /> 형광펜
-                  </button>
-                </div>
+                <textarea
+                  :ref="el => setTaskTextareaRef(el, detail.id)"
+                  v-model="detail.feedbackText"
+                  class="feedback-textarea"
+                  placeholder="학생의 질문에 대한 답변과 상세 피드백을 작성해주세요."
+                />
                 <div v-if="detail.highlight" class="highlight-preview">
                   <Highlighter :size="12" color="#f9a825" />
                   <span class="highlight-preview-text">{{ detail.highlight }}</span>
@@ -161,6 +147,12 @@
                   </button>
                 </div>
                 <div class="feedback-btn-row">
+                  <button
+                    class="highlight-btn"
+                    @click="applyTaskHighlight(detail)"
+                  >
+                    <Highlighter :size="16" /> 형광펜
+                  </button>
                   <button
                     class="task-feedback-btn"
                     :disabled="!detail.feedbackText?.trim() || detail.submitting"
@@ -203,7 +195,6 @@ const existingPlannerFeedback = ref(null)
 const plannerFeedbackText = ref('')
 const plannerFeedbackSubmitting = ref(false)
 const plannerHighlight = ref('')
-const plannerShowHighlightBtn = ref(false)
 const plannerTextareaRef = ref(null)
 const taskTextareaRefs = {}
 
@@ -211,36 +202,27 @@ function setTaskTextareaRef(el, id) {
   if (el) taskTextareaRefs[id] = el
 }
 
-// 플래너 피드백 textarea에서 텍스트 선택 시
-function handlePlannerSelection() {
-  const el = plannerTextareaRef.value
-  if (!el) return
-  const selected = el.value.substring(el.selectionStart, el.selectionEnd).trim()
-  plannerShowHighlightBtn.value = selected.length > 0
-}
-
+// 형광펜 버튼 클릭: textarea에서 현재 선택된 텍스트를 highlight로 지정
 function applyPlannerHighlight() {
   const el = plannerTextareaRef.value
   if (!el) return
   const selected = el.value.substring(el.selectionStart, el.selectionEnd).trim()
-  if (selected) plannerHighlight.value = selected
-  plannerShowHighlightBtn.value = false
-}
-
-// 과제 피드백 textarea에서 텍스트 선택 시
-function handleTaskSelection(detail) {
-  const el = taskTextareaRefs[detail.id]
-  if (!el) return
-  const selected = el.value.substring(el.selectionStart, el.selectionEnd).trim()
-  detail.showHighlightBtn = selected.length > 0
+  if (selected) {
+    plannerHighlight.value = selected
+  } else {
+    alert('형광펜을 적용할 텍스트를 먼저 드래그로 선택해주세요.')
+  }
 }
 
 function applyTaskHighlight(detail) {
   const el = taskTextareaRefs[detail.id]
   if (!el) return
   const selected = el.value.substring(el.selectionStart, el.selectionEnd).trim()
-  if (selected) detail.highlight = selected
-  detail.showHighlightBtn = false
+  if (selected) {
+    detail.highlight = selected
+  } else {
+    alert('형광펜을 적용할 텍스트를 먼저 드래그로 선택해주세요.')
+  }
 }
 
 const dayNames = ['일', '월', '화', '수', '목', '금', '토']
@@ -720,30 +702,23 @@ onMounted(() => {
 }
 
 /* 하이라이트 UI */
-.textarea-wrapper {
-  position: relative;
-}
-
-.highlight-float-btn {
-  position: absolute;
-  bottom: 10px;
-  right: 10px;
+.highlight-btn {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 6px 12px;
-  border-radius: 8px;
+  padding: 12px 16px;
+  border-radius: 12px;
   border: none;
   background: #fff59d;
   color: #5d4037;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   transition: background 0.15s;
+  flex-shrink: 0;
 }
 
-.highlight-float-btn:hover {
+.highlight-btn:hover {
   background: #fff176;
 }
 
