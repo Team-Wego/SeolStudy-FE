@@ -83,6 +83,10 @@ export function getTaskDetail(taskId) {
     return api.get(`/tasks/${taskId}`);
 }
 
+export function updateTaskComment(menteeId, taskId, comment) {
+    return api.put(`/mentees/${menteeId}/tasks/${taskId}/comment`, { comment });
+}
+
 export function uploadTaskImages(menteeId, taskId, files) {
     const formData = new FormData();
     files.forEach((file) => formData.append("files", file));

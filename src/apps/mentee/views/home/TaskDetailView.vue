@@ -73,24 +73,29 @@
           <span class="feedback-time">{{ formatTimeAgo(feedback.createdAt) }}</span>
         </div>
 
-        <!-- Comment Thread -->
-        <div v-if="task.comment" class="comment-thread">
-          <div class="comment-bubble student">
-            <p class="bubble-text">{{ task.comment }}</p>
-            <span v-if="task.submittedAt" class="bubble-time">{{ formatTimeAgo(task.submittedAt) }}</span>
-          </div>
-        </div>
-
-        <!-- Comment Input Section -->
+        <!-- Comment Section -->
         <div class="comment-input-section">
           <h3 class="comment-label">COMMENT</h3>
-          <div class="comment-input-wrap">
-            <textarea v-model="commentInput" class="comment-input"
-              placeholder="오늘 공부하며 궁금했던 점이나 멘토님께 전하고 싶은 말을 남겨보세요." />
-            <button class="comment-submit-btn" :disabled="!commentInput.trim()" @click="handleCommentSubmit">
-              코멘트 남기기
-            </button>
-          </div>
+          <template v-if="task.comment && !commentEditing">
+            <!-- 기존 코멘트 표시 -->
+            <div class="comment-display">
+              <p class="comment-display-text">{{ task.comment }}</p>
+              <button class="comment-edit-btn" @click="startCommentEdit">수정</button>
+            </div>
+          </template>
+          <template v-else>
+            <!-- 새 코멘트 입력 / 수정 -->
+            <div class="comment-input-wrap">
+              <textarea v-model="commentInput" class="comment-input"
+                placeholder="오늘 공부하며 궁금했던 점이나 멘토님께 전하고 싶은 말을 남겨보세요." />
+              <div class="comment-btn-row">
+                <button v-if="commentEditing" class="comment-cancel-btn" @click="cancelCommentEdit">취소</button>
+                <button class="comment-submit-btn" :disabled="!commentInput.trim()" @click="handleCommentSubmit">
+                  {{ commentEditing ? '수정하기' : '코멘트 남기기' }}
+                </button>
+              </div>
+            </div>
+          </template>
         </div>
       </template>
     </template>
@@ -100,8 +105,8 @@
     <!-- Bottom Button -->
     <div class="bottom-bar">
       <button class="cert-btn" :class="{ done: task?.images?.length }" @click="handleCertification">
-        <span>공부 인증하기</span>
         <CheckCircle v-if="task?.images?.length" :size="18" color="#fff" />
+        <span>{{ task?.images?.length ? '공부 인증 완료' : '공부 인증하기' }}</span>
       </button>
     </div>
 
@@ -116,7 +121,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ChevronLeft, FileText, Download, AlertCircle, CheckCircle } from 'lucide-vue-next'
 import SubjectTag from '@/components/common/SubjectTag.vue'
 import { getCookie } from '@/utils/cookie'
-import { getTaskDetail, uploadTaskImages } from '@/api/task/taskApi'
+import { getTaskDetail, uploadTaskImages, updateTaskComment } from '@/api/task/taskApi'
 import { getFeedbacks, getFeedbackDetail } from '@/api/feedback/feedbackApi'
 
 const route = useRoute()
@@ -126,6 +131,7 @@ const task = ref(null)
 const feedback = ref(null)
 const loading = ref(true)
 const commentInput = ref('')
+const commentEditing = ref(false)
 const fileInputRef = ref(null)
 const uploading = ref(false)
 
@@ -153,6 +159,10 @@ function previewImage(url) {
 }
 
 function handleCertification() {
+  if (task.value?.images?.length) {
+    alert('공부 인증이 완료되었습니다!')
+    return
+  }
   fileInputRef.value?.click()
 }
 
@@ -177,11 +187,29 @@ async function handleFileSelected(e) {
   }
 }
 
-function handleCommentSubmit() {
-  if (!commentInput.value.trim()) return
-  // TODO: 코멘트 제출 API 연결
-  console.log('코멘트 제출:', commentInput.value.trim())
+function startCommentEdit() {
+  commentInput.value = task.value.comment || ''
+  commentEditing.value = true
+}
+
+function cancelCommentEdit() {
   commentInput.value = ''
+  commentEditing.value = false
+}
+
+async function handleCommentSubmit() {
+  if (!commentInput.value.trim()) return
+  const memberId = getCookie('memberId')
+  if (!memberId) return
+
+  try {
+    await updateTaskComment(Number(memberId), task.value.id, commentInput.value.trim())
+    task.value.comment = commentInput.value.trim()
+    commentInput.value = ''
+    commentEditing.value = false
+  } catch (err) {
+    console.error('코멘트 저장 실패:', err)
+  }
 }
 
 async function loadTask() {
@@ -498,7 +526,7 @@ onMounted(() => loadTask())
 .comment-input {
   width: 100%;
   min-height: 72px;
-  padding: 14px 16px 44px;
+  padding: 14px 16px;
   border-radius: 16px;
   border: 1px solid #EBEBEB;
   background: #fff;
@@ -513,10 +541,56 @@ onMounted(() => loadTask())
   color: #C2C2C2;
 }
 
-.comment-submit-btn {
+/* Comment Display (기존 코멘트) */
+.comment-display {
+  background: #F3F4F6;
+  border-radius: 16px;
+  padding: 16px;
+  position: relative;
+}
+
+.comment-display-text {
+  font-size: 14px;
+  color: #3D3D3D;
+  line-height: 1.6;
+  margin: 0;
+  white-space: pre-wrap;
+  padding-right: 40px;
+}
+
+.comment-edit-btn {
   position: absolute;
   right: 12px;
-  bottom: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0CA5FE;
+  padding: 4px 8px;
+}
+
+.comment-btn-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.comment-cancel-btn {
+  background: #F3F4F6;
+  color: #8E8E93;
+  border: none;
+  border-radius: 50px;
+  padding: 6px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.comment-submit-btn {
   background: #0CA5FE;
   color: #fff;
   border: none;
