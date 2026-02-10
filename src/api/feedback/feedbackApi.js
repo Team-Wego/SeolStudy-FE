@@ -30,3 +30,20 @@ export const createFeedback = (data, files) => {
     headers: { 'Content-Type': 'multipart/form-data' },
   })
 }
+
+// 피드백 수정
+export const updateFeedback = (feedbackId, data, files) => {
+  const formData = new FormData()
+  formData.append('request', new Blob([JSON.stringify(data)], { type: 'application/json' }))
+  if (files && files.length > 0) {
+    files.forEach((file) => formData.append('files', file))
+  }
+  return api.put(`/mentors/feedback/${feedbackId}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}
+
+// 피드백 삭제
+export const deleteFeedback = (feedbackId) => {
+  return api.delete(`/mentors/feedback/${feedbackId}`)
+}

@@ -12,18 +12,10 @@
     <template v-else>
       <!-- 탭 전환 -->
       <div class="tab-bar">
-        <button
-          class="tab-btn"
-          :class="{ active: activeTab === 'daily' }"
-          @click="activeTab = 'daily'"
-        >
+        <button class="tab-btn" :class="{ active: activeTab === 'daily' }" @click="activeTab = 'daily'">
           일일 멘토링
         </button>
-        <button
-          class="tab-btn"
-          :class="{ active: activeTab === 'monthly' }"
-          @click="activeTab = 'monthly'"
-        >
+        <button class="tab-btn" :class="{ active: activeTab === 'monthly' }" @click="activeTab = 'monthly'">
           월간 스케줄
         </button>
       </div>
@@ -31,21 +23,12 @@
       <!-- 2컬럼 레이아웃 -->
       <div class="detail-layout">
         <!-- 좌측 사이드바 -->
-        <MenteeProfile
-          :mentee-id="menteeId"
-          :mentee-info="menteeInfo"
-        />
+        <MenteeProfile :mentee-id="menteeId" :mentee-info="menteeInfo" />
 
         <!-- 우측 컨텐츠 -->
         <div class="content-area">
-          <DailyMentoringTab
-            v-if="activeTab === 'daily'"
-            :mentee-id="menteeId"
-          />
-          <MonthlyScheduleTab
-            v-if="activeTab === 'monthly'"
-            :mentee-id="menteeId"
-          />
+          <DailyMentoringTab v-if="activeTab === 'daily'" :mentee-id="menteeId" />
+          <MonthlyScheduleTab v-if="activeTab === 'monthly'" :mentee-id="menteeId" />
         </div>
       </div>
     </template>

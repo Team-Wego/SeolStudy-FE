@@ -29,6 +29,17 @@ export function createTask(menteeId, data) {
     return api.post(`/mentees/${menteeId}/tasks`, data);
 }
 
+export function createMentorTask(menteeId, data, files) {
+    const formData = new FormData();
+    formData.append("request", new Blob([JSON.stringify(data)], { type: "application/json" }));
+    if (files && files.length > 0) {
+        files.forEach((f) => formData.append("files", f));
+    }
+    return api.post(`/mentors/mentees/${menteeId}/tasks`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+    });
+}
+
 export function getDailyTasks(menteeId, date) {
     return api.get(`/mentees/${menteeId}/planner/tasks`, { params: { date } });
 }
