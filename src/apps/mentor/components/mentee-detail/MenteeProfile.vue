@@ -48,9 +48,7 @@
           >
             <Paperclip :size="14" color="#5bb8f6" />
           </button>
-          <span class="creator-badge" :class="goal.creatorId === currentMentorId ? 'mentor' : 'mentee'">
-            {{ goal.creatorId === currentMentorId ? '멘토' : '멘티' }}
-          </span>
+          <span v-if="goal.creatorId !== currentMentorId" class="creator-badge mentee">멘티</span>
           <button
             v-if="goal.creatorId === currentMentorId"
             class="goal-kebab-btn"
@@ -570,11 +568,6 @@ onMounted(() => {
   padding: 2px 6px;
   border-radius: 4px;
   flex-shrink: 0;
-}
-
-.creator-badge.mentor {
-  background: #eef3ff;
-  color: #4a6cf7;
 }
 
 .creator-badge.mentee {
