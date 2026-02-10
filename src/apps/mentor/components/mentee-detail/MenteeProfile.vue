@@ -41,6 +41,13 @@
           />
           <span v-else class="subject-tag-etc">{{ subjectNameMap[goal.subject] || goal.subject }}</span>
           <span class="goal-name">{{ goal.name }}</span>
+          <button
+            v-if="goal.worksheetFiles?.length"
+            class="worksheet-clip-btn"
+            @click.stop="openWorksheetFile(goal.worksheetFiles[0].url)"
+          >
+            <Paperclip :size="14" color="#5bb8f6" />
+          </button>
         </div>
         <div v-if="goals.length === 0 && !goalsLoading" class="empty-text">
           등록된 목표가 없습니다
@@ -66,6 +73,18 @@
           class="goal-input"
           placeholder="목표를 입력해주세요"
         />
+        <div class="goal-file-row">
+          <input ref="goalFileInputRef" type="file" hidden @change="handleGoalFileSelect" />
+          <button class="goal-file-btn" @click="goalFileInputRef?.click()">
+            <Paperclip :size="14" /> 학습지 첨부
+          </button>
+          <div v-if="newGoal.file" class="goal-file-preview">
+            <span class="goal-file-name">{{ newGoal.file.name }}</span>
+            <button class="goal-file-remove" @click="newGoal.file = null">
+              <X :size="12" />
+            </button>
+          </div>
+        </div>
         <div class="goal-form-actions">
           <button class="goal-cancel-btn" @click="cancelGoalForm">취소</button>
           <button
@@ -99,7 +118,7 @@
 
 <script setup>
 import { ref, reactive, onMounted, watch } from 'vue'
-import { User, Plus } from 'lucide-vue-next'
+import { User, Plus, Paperclip, X } from 'lucide-vue-next'
 import SubjectTag from '@/components/common/SubjectTag.vue'
 import { getGoals, createGoal } from '@/api/mentoring/goalApi'
 import { getMemo, saveMemo } from '@/api/mentoring/mentoringApi'
@@ -127,7 +146,8 @@ const subjectOptions = [
 const goals = ref([])
 const goalsLoading = ref(false)
 const showGoalForm = ref(false)
-const newGoal = reactive({ name: '', subject: null })
+const newGoal = reactive({ name: '', subject: null, file: null })
+const goalFileInputRef = ref(null)
 
 const memoContent = ref('')
 const memoSaved = ref('')
@@ -153,12 +173,23 @@ function cancelGoalForm() {
   showGoalForm.value = false
   newGoal.name = ''
   newGoal.subject = null
+  newGoal.file = null
+}
+
+function handleGoalFileSelect(e) {
+  const file = e.target.files?.[0]
+  if (file) newGoal.file = file
+  e.target.value = ''
+}
+
+function openWorksheetFile(url) {
+  window.open(url, '_blank')
 }
 
 async function handleCreateGoal() {
   if (!newGoal.name.trim() || !newGoal.subject) return
   try {
-    await createGoal(Number(props.menteeId), newGoal.name.trim(), newGoal.subject)
+    await createGoal(Number(props.menteeId), newGoal.name.trim(), newGoal.subject, newGoal.file)
     cancelGoalForm()
     await fetchGoals()
   } catch (e) {
@@ -336,6 +367,27 @@ onMounted(() => {
   font-size: 14px;
   color: #333;
   font-weight: 500;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.worksheet-clip-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+
+.worksheet-clip-btn:hover {
+  opacity: 1;
 }
 
 .empty-text {
@@ -382,6 +434,65 @@ onMounted(() => {
   background: #f5f5f5;
   font-size: 13px;
   outline: none;
+}
+
+.goal-file-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.goal-file-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px dashed #ccc;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.goal-file-btn:hover {
+  border-color: #999;
+}
+
+.goal-file-preview {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: #f3f4f6;
+  border-radius: 6px;
+  font-size: 11px;
+  color: #555;
+  min-width: 0;
+}
+
+.goal-file-name {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.goal-file-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 1px;
+  color: #999;
+  display: flex;
+  align-items: center;
+}
+
+.goal-file-remove:hover {
+  color: #f44336;
 }
 
 .goal-form-actions {
