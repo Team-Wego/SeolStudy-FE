@@ -339,7 +339,7 @@ const plannerComment = ref(null)
 const studyTimes = ref([])
 
 const dayNames = ['일', '월', '화', '수', '목', '금', '토']
-const timeSlots = Array.from({ length: 18 }, (_, i) => i + 6) // 6~23 (6:00~24:00 커버)
+const timeSlots = Array.from({ length: 24 }, (_, i) => i) // 0~23 (0:00~24:00 커버)
 
 const subjectNameMap = {
   KOR: '국어',
