@@ -165,7 +165,7 @@ import {
 import SubjectTag from '@/components/common/SubjectTag.vue'
 import { getCookie } from '@/utils/cookie'
 import { getTaskDetail, uploadTaskImages, updateTaskComment, submitTask, updateTaskStatus } from '@/api/task/taskApi'
-import { getFeedbacks, getFeedbackDetail } from '@/api/feedback/feedbackApi'
+import { getTaskFeedback } from '@/api/feedback/feedbackApi'
 import { getGoals } from '@/api/mentoring/goalApi'
 
 const route = useRoute()
@@ -296,14 +296,8 @@ async function loadTask() {
     }
 
     promises.push(
-      getFeedbacks(memberId, 'TASK').then(async feedbackRes => {
-        const list = feedbackRes.data?.content || feedbackRes.data || []
-        // 피드백 상세를 병렬로 조회
-        const details = await Promise.all(
-          list.map(item => getFeedbackDetail(item.feedbackId || item.id).catch(() => null))
-        )
-        const matched = details.find(d => d?.data?.taskId === data.id)
-        if (matched) feedback.value = matched.data
+      getTaskFeedback(data.id).then(res => {
+        if (res.data) feedback.value = res.data
       }).catch(() => {})
     )
 

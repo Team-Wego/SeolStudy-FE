@@ -12,6 +12,11 @@ export const getFeedbackDetail = (feedbackId) => {
   return api.get(`/feedback/${feedbackId}`)
 }
 
+// 과제별 피드백 조회
+export const getTaskFeedback = (taskId) => {
+  return api.get(`/feedback/task/${taskId}`)
+}
+
 // 일별 피드백 카운트 조회
 export const getDailyFeedbackCount = (menteeId, startDate, endDate) => {
   return api.get('/feedback/daily-count', {
