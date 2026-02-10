@@ -93,26 +93,23 @@
     <!-- ===== 주간 탭 ===== -->
     <template v-if="activeTab === 'weekly'">
       <div class="weekly-section">
-        <template v-for="(row, rowIdx) in weeklyRows" :key="rowIdx">
-          <div class="weekly-row-header">{{ row.label }}</div>
-          <div class="weekly-row-grid">
+        <div class="weekly-row-grid">
+          <div
+            v-for="(w, idx) in monthWeeks"
+            :key="idx"
+            class="week-cell-wrapper"
+            :class="{ 'week-wrapper-selected': selectedWeekIdx === idx }"
+            @click="selectWeek(idx)"
+          >
             <div
-              v-for="w in row.weeks"
-              :key="w.idx"
-              class="week-cell-wrapper"
-              :class="{ 'week-wrapper-selected': selectedWeekIdx === w.idx }"
-              @click="selectWeek(w.idx)"
+              class="week-cell-box"
+              :class="{ 'week-box-has': w.hasFeedback }"
             >
-              <div
-                class="week-cell-box"
-                :class="{ 'week-box-has': w.hasFeedback }"
-              >
-                <span class="week-box-label">{{ w.label }}</span>
-                <span v-if="w.hasFeedback" class="week-box-dot" />
-              </div>
+              <span class="week-box-label">{{ w.label }}</span>
+              <span v-if="w.hasFeedback" class="week-box-dot" />
             </div>
           </div>
-        </template>
+        </div>
       </div>
 
       <!-- 선택된 주의 WEEKLY 피드백 -->
@@ -278,7 +275,7 @@ const subjectTagMap = { ENG: 'english', MATH: 'math', KOR: 'korean' }
 const today = new Date()
 const currentDate = ref(new Date(today))
 const currentYear = ref(today.getFullYear())
-const currentQuarter = ref(Math.floor(today.getMonth() / 3) + 1)
+const currentMonth = ref(today.getMonth() + 1)
 
 // ── 데이터 ──
 const dailyCounts = ref({})
@@ -329,7 +326,7 @@ const navLabel = computed(() => {
     return `${y}. ${m}. ${d} ${wd}`
   }
   if (activeTab.value === 'weekly') {
-    return `${currentYear.value}년 ${currentQuarter.value}분기`
+    return `${currentYear.value}년 ${currentMonth.value}월`
   }
   return `${currentYear.value}년`
 })
@@ -341,12 +338,13 @@ function navigate(dir) {
     d.setDate(d.getDate() + dir * 7)
     currentDate.value = d
   } else if (activeTab.value === 'weekly') {
-    currentQuarter.value += dir
-    if (currentQuarter.value > 4) {
-      currentQuarter.value = 1
+    selectedWeekIdx.value = null
+    currentMonth.value += dir
+    if (currentMonth.value > 12) {
+      currentMonth.value = 1
       currentYear.value++
-    } else if (currentQuarter.value < 1) {
-      currentQuarter.value = 4
+    } else if (currentMonth.value < 1) {
+      currentMonth.value = 12
       currentYear.value--
     }
   } else {
@@ -399,49 +397,35 @@ const filteredPlannerFeedbacks = computed(() => {
   })
 })
 
-// ── 주간: 분기별 주 데이터 (유무만 체크) ──
-const quarterWeeks = computed(() => {
-  const qStart = new Date(currentYear.value, (currentQuarter.value - 1) * 3, 1)
-  const qEnd = new Date(currentYear.value, currentQuarter.value * 3, 0)
+// ── 주간: 월별 주 데이터 (유무만 체크) ──
+const monthWeeks = computed(() => {
+  const monthStart = new Date(currentYear.value, currentMonth.value - 1, 1)
+  const monthEnd = new Date(currentYear.value, currentMonth.value, 0)
   const weeks = []
-  let mon = getMonday(qStart)
+  let mon = getMonday(monthStart)
+  let weekNum = 1
 
-  while (mon <= qEnd) {
+  while (mon <= monthEnd) {
     const sun = new Date(mon)
     sun.setDate(mon.getDate() + 6)
-    const label = `${mon.getMonth() + 1}.${mon.getDate()}~`
     const startStr = formatDateStr(mon)
     const endStr = formatDateStr(sun)
     const hasFeedback = allFeedbacks.value.some((fb) => {
       if (fb.feedbackType !== 'WEEKLY') return false
       return fb.targetDate >= startStr && fb.targetDate <= endStr
     })
-    weeks.push({ label, hasFeedback, startDate: new Date(mon), endDate: new Date(sun) })
+    weeks.push({ label: `${weekNum}주차`, hasFeedback, startDate: new Date(mon), endDate: new Date(sun), weekNum })
+    weekNum++
     mon = new Date(mon)
     mon.setDate(mon.getDate() + 7)
   }
   return weeks
 })
 
-// 주간: 5개씩 행 그룹 + 주차 라벨
-const weeklyRows = computed(() => {
-  const rows = []
-  const all = quarterWeeks.value
-  const perRow = 5
-  for (let i = 0; i < all.length; i += perRow) {
-    const chunk = all.slice(i, i + perRow).map((w, j) => ({ ...w, idx: i + j }))
-    rows.push({
-      label: `${i + 1}주차 ~ ${Math.min(i + perRow, all.length)}주차`,
-      weeks: chunk,
-    })
-  }
-  return rows
-})
-
 // 주간: 선택된 주의 WEEKLY 피드백 (1개)
 const selectedWeeklyFeedback = computed(() => {
   if (selectedWeekIdx.value === null) return null
-  const week = quarterWeeks.value[selectedWeekIdx.value]
+  const week = monthWeeks.value[selectedWeekIdx.value]
   if (!week) return null
   const startStr = formatDateStr(week.startDate)
   const endStr = formatDateStr(week.endDate)
@@ -454,16 +438,15 @@ const selectedWeeklyFeedback = computed(() => {
 // 주간: 선택된 주의 라벨
 const selectedWeeklyLabel = computed(() => {
   if (selectedWeekIdx.value === null) return ''
-  const week = quarterWeeks.value[selectedWeekIdx.value]
+  const week = monthWeeks.value[selectedWeekIdx.value]
   if (!week) return ''
-  const weekNum = Math.ceil(week.startDate.getDate() / 7)
-  return `${week.startDate.getMonth() + 1}월 ${weekNum}주차 피드백`
+  return `${currentMonth.value}월 ${week.weekNum}주차 피드백`
 })
 
 // 주간: 선택된 주의 날짜 범위 텍스트
 const selectedWeeklyDateRange = computed(() => {
   if (selectedWeekIdx.value === null) return ''
-  const week = quarterWeeks.value[selectedWeekIdx.value]
+  const week = monthWeeks.value[selectedWeekIdx.value]
   if (!week) return ''
   const s = week.startDate
   const e = week.endDate
@@ -572,7 +555,7 @@ watch(currentDate, () => {
   if (activeTab.value === 'daily' || activeTab.value === 'planner') loadData()
 })
 watch(currentYear, () => loadData())
-watch(currentQuarter, () => { if (activeTab.value === 'weekly') loadData() })
+watch(currentMonth, () => { if (activeTab.value === 'weekly') loadData() })
 
 onMounted(() => loadData())
 </script>
