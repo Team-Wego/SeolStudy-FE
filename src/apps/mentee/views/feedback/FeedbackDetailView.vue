@@ -40,25 +40,39 @@
       <div v-if="feedback.feedbackImages && feedback.feedbackImages.length > 0" class="images-section">
         <h3 class="images-title">첨부 이미지</h3>
         <div class="images-grid">
-          <img
-            v-for="img in feedback.feedbackImages"
-            :key="img.feedbackImageId"
-            :src="img.imageUrl"
-            class="feedback-image"
-            @click="previewImage(img.imageUrl)"
-          />
+          <img v-for="(img, idx) in feedback.feedbackImages" :key="img.feedbackImageId" :src="img.imageUrl"
+            class="feedback-image" @click="openPreview(idx)" />
         </div>
       </div>
     </template>
 
     <div v-else class="empty-text">피드백을 찾을 수 없습니다</div>
+
+    <!-- 이미지 미리보기 모달 -->
+    <Teleport to="body">
+      <div v-if="previewModal.show" class="image-preview-overlay" @click.self="closePreview">
+        <button v-if="previewModal.images.length > 1" class="preview-nav preview-prev" @click="prevImage">
+          <ChevronLeft :size="28" />
+        </button>
+        <img :src="previewModal.images[previewModal.index]" class="preview-image" />
+        <button v-if="previewModal.images.length > 1" class="preview-nav preview-next" @click="nextImage">
+          <ChevronRight :size="28" />
+        </button>
+        <button class="preview-close" @click="closePreview">
+          <X :size="24" />
+        </button>
+        <span v-if="previewModal.images.length > 1" class="preview-counter">
+          {{ previewModal.index + 1 }} / {{ previewModal.images.length }}
+        </span>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ChevronLeft } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, X } from 'lucide-vue-next'
 import { getFeedbackDetail } from '@/api/feedback/feedbackApi'
 
 const route = useRoute()
@@ -93,8 +107,20 @@ function renderHighlightedText(content, highlight) {
   return escaped.split(escapedHighlight).join(`<span class="highlight-mark">${escapedHighlight}</span>`)
 }
 
-function previewImage(url) {
-  window.open(url, '_blank')
+const previewModal = ref({ show: false, images: [], index: 0 })
+
+function openPreview(idx) {
+  const images = (feedback.value?.feedbackImages || []).map(img => img.imageUrl)
+  previewModal.value = { show: true, images, index: idx }
+}
+function closePreview() { previewModal.value.show = false }
+function prevImage() {
+  const m = previewModal.value
+  m.index = (m.index - 1 + m.images.length) % m.images.length
+}
+function nextImage() {
+  const m = previewModal.value
+  m.index = (m.index + 1) % m.images.length
 }
 
 async function loadDetail() {
@@ -157,10 +183,21 @@ onMounted(() => loadDetail())
   color: #fff;
 }
 
-.type-TASK { background: #2196f3; }
-.type-WEEKLY { background: #ff9800; }
-.type-MONTHLY { background: #9c27b0; }
-.type-PLANNER { background: #4caf50; }
+.type-TASK {
+  background: #2196f3;
+}
+
+.type-WEEKLY {
+  background: #ff9800;
+}
+
+.type-MONTHLY {
+  background: #9c27b0;
+}
+
+.type-PLANNER {
+  background: #4caf50;
+}
 
 .detail-date {
   font-size: 13px;
@@ -256,5 +293,89 @@ onMounted(() => loadDetail())
   color: #999;
   font-size: 13px;
   padding: 40px 0;
+}
+</style>
+
+<style>
+.image-preview-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview-image {
+  max-width: 85vw;
+  max-height: 85vh;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.preview-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: #fff;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.preview-nav:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.preview-prev {
+  left: 16px;
+}
+
+.preview-next {
+  right: 16px;
+}
+
+.preview-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: #fff;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.preview-counter {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 4px 14px;
+  border-radius: 16px;
 }
 </style>
