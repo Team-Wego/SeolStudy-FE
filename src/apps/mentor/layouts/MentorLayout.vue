@@ -313,8 +313,7 @@ function handleLogout() {
 @media (max-width: 768px) {
   .layout-wrap {
     flex-direction: column;
-    height: auto;
-    min-height: 100dvh;
+    height: 100dvh;
   }
 
   .sidebar {
@@ -360,7 +359,8 @@ function handleLogout() {
 
   .main-content {
     flex: 1;
-    overflow-y: visible;
+    min-height: 0;
+    overflow-y: auto;
   }
 }
 </style>
