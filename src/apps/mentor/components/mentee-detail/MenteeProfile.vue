@@ -33,7 +33,7 @@
     <div class="section-card">
       <h3 class="section-title">목표 🎯</h3>
       <div class="goal-list">
-        <div v-for="goal in goals" :key="goal.goalId" class="goal-item">
+        <div v-for="goal in sortedGoals" :key="goal.goalId" class="goal-item">
           <SubjectTag
             v-if="subjectTagMap[goal.subject]"
             :subject="subjectTagMap[goal.subject]"
@@ -48,6 +48,9 @@
           >
             <Paperclip :size="14" color="#5bb8f6" />
           </button>
+          <span class="creator-badge" :class="goal.creatorId === currentMentorId ? 'mentor' : 'mentee'">
+            {{ goal.creatorId === currentMentorId ? '멘토' : '멘티' }}
+          </span>
         </div>
         <div v-if="goals.length === 0 && !goalsLoading" class="empty-text">
           등록된 목표가 없습니다
@@ -117,11 +120,12 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { User, Plus, Paperclip, X } from 'lucide-vue-next'
 import SubjectTag from '@/components/common/SubjectTag.vue'
 import { getGoals, createGoal } from '@/api/mentoring/goalApi'
 import { getMemo, saveMemo } from '@/api/mentoring/mentoringApi'
+import { getCookie } from '@/utils/cookie'
 
 const props = defineProps({
   menteeId: { type: [Number, String], required: true },
@@ -145,9 +149,18 @@ const subjectOptions = [
 
 const goals = ref([])
 const goalsLoading = ref(false)
+const currentMentorId = ref(Number(getCookie('memberId')))
 const showGoalForm = ref(false)
 const newGoal = reactive({ name: '', subject: null, file: null })
 const goalFileInputRef = ref(null)
+
+const sortedGoals = computed(() => {
+  return [...goals.value].sort((a, b) => {
+    const aIsMentor = a.creatorId === currentMentorId.value ? 0 : 1
+    const bIsMentor = b.creatorId === currentMentorId.value ? 0 : 1
+    return aIsMentor - bIsMentor
+  })
+})
 
 const memoContent = ref('')
 const memoSaved = ref('')
@@ -372,6 +385,24 @@ onMounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.creator-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.creator-badge.mentor {
+  background: #eef3ff;
+  color: #4a6cf7;
+}
+
+.creator-badge.mentee {
+  background: #e8f5e9;
+  color: #2e7d32;
 }
 
 .worksheet-clip-btn {

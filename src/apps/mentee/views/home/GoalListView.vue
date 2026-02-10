@@ -21,11 +21,12 @@
       </div>
 
       <!-- 목표 아이템들 -->
-      <div v-for="goal in goals" :key="goal.goalId" class="relative flex items-center bg-white rounded-2xl"
+      <div v-for="goal in sortedGoals" :key="goal.goalId" class="relative flex items-center bg-white rounded-2xl"
         style="padding: 18px 16px; margin-bottom: 10px;">
         <SubjectTag :subject="subjectMap[goal.subject] || 'korean'" size="sm" />
         <span class="flex-1 font-medium" style="font-size: 14px; margin-left: 12px;">{{ goal.name }}</span>
-        <button @click.stop="toggleMenu(goal.goalId)">
+        <span v-if="!isMyGoal(goal)" class="creator-badge mentor">멘토</span>
+        <button v-if="isMyGoal(goal)" @click.stop="toggleMenu(goal.goalId)">
           <MoreVertical :size="18" color="#C7C7CC" />
         </button>
 
@@ -178,7 +179,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { ChevronLeft, Plus, MoreVertical } from 'lucide-vue-next'
 import SubjectTag from '@/components/common/SubjectTag.vue'
 import { getCookie } from '@/utils/cookie'
@@ -188,6 +189,7 @@ import { getMember } from '@/api/member/memberApi'
 const goals = ref([])
 const member = ref(null)
 const loading = ref(true)
+const currentMemberId = ref(null)
 const showModal = ref(false)
 const showEditModal = ref(false)
 const showDeleteModal = ref(false)
@@ -248,8 +250,21 @@ const dDay = computed(() => {
   return diff > 0 ? diff : 0
 })
 
+function isMyGoal(goal) {
+  return goal.creatorId === currentMemberId.value
+}
+
+const sortedGoals = computed(() => {
+  return [...goals.value].sort((a, b) => {
+    const aIsMine = a.creatorId === currentMemberId.value ? 0 : 1
+    const bIsMine = b.creatorId === currentMemberId.value ? 0 : 1
+    return aIsMine - bIsMine
+  })
+})
+
 onMounted(async () => {
   const menteeId = getCookie('memberId')
+  currentMemberId.value = Number(menteeId)
   await Promise.all([
     fetchGoals(),
     fetchMember(Number(menteeId)),
@@ -369,6 +384,20 @@ async function handleDelete() {
 </script>
 
 <style scoped>
+.creator-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  margin-left: 6px;
+}
+
+.creator-badge.mentor {
+  background: #eef3ff;
+  color: #4a6cf7;
+}
+
 .overlay-enter-active,
 .overlay-leave-active {
   transition: opacity 0.25s ease;
