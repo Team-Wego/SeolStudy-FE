@@ -1041,6 +1041,8 @@ onMounted(() => {
 .timetable-side {
   width: 50%;
   flex-shrink: 0;
+  position: relative;
+  z-index: 0;
 }
 
 .timetable {}

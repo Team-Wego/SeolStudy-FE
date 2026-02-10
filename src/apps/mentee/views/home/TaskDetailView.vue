@@ -164,7 +164,7 @@ import {
 } from 'lucide-vue-next'
 import SubjectTag from '@/components/common/SubjectTag.vue'
 import { getCookie } from '@/utils/cookie'
-import { getTaskDetail, uploadTaskImages, updateTaskComment, submitTask } from '@/api/task/taskApi'
+import { getTaskDetail, uploadTaskImages, updateTaskComment, submitTask, updateTaskStatus } from '@/api/task/taskApi'
 import { getFeedbacks, getFeedbackDetail } from '@/api/feedback/feedbackApi'
 import { getGoals } from '@/api/mentoring/goalApi'
 
@@ -226,6 +226,8 @@ async function handleFileSelected(e) {
     task.value.images.push(...data)
     await submitTask(Number(memberId), task.value.id)
     task.value.submittedAt = new Date().toISOString()
+    await updateTaskStatus(Number(memberId), task.value.id, true)
+    task.value.isChecked = true
     showToast.value = true
   } catch (err) { console.error(err) }
   e.target.value = ''
@@ -280,24 +282,32 @@ async function loadTask() {
     task.value = data
     const memberId = getCookie('memberId')
 
-    // 목표 로드
+    // 목표 + 피드백 병렬 로드
+    const promises = []
+
     if (data.goalId) {
-      const goalsRes = await getGoals(memberId)
-      const goals = goalsRes.data?.content || goalsRes.data || []
-      const matched = goals.find(g => (g.goalId || g.id) === data.goalId)
-      if (matched) goalName.value = matched.name || matched.goalName
+      promises.push(
+        getGoals(memberId).then(goalsRes => {
+          const goals = goalsRes.data?.content || goalsRes.data || []
+          const matched = goals.find(g => (g.goalId || g.id) === data.goalId)
+          if (matched) goalName.value = matched.name || matched.goalName
+        }).catch(() => {})
+      )
     }
 
-    // 피드백 로드
-    const feedbackRes = await getFeedbacks(memberId, 'TASK')
-    const list = feedbackRes.data?.content || feedbackRes.data || []
-    for (const item of list) {
-      const dRes = await getFeedbackDetail(item.feedbackId || item.id)
-      if (dRes.data?.taskId === data.id) {
-        feedback.value = dRes.data
-        break
-      }
-    }
+    promises.push(
+      getFeedbacks(memberId, 'TASK').then(async feedbackRes => {
+        const list = feedbackRes.data?.content || feedbackRes.data || []
+        // 피드백 상세를 병렬로 조회
+        const details = await Promise.all(
+          list.map(item => getFeedbackDetail(item.feedbackId || item.id).catch(() => null))
+        )
+        const matched = details.find(d => d?.data?.taskId === data.id)
+        if (matched) feedback.value = matched.data
+      }).catch(() => {})
+    )
+
+    await Promise.all(promises)
   } catch (e) { console.error(e) }
   finally { loading.value = false }
 }
