@@ -194,8 +194,6 @@ async function fetchDashboardData() {
       getPendingFeedbacks(),
     ])
 
-    console.log(feedbackRes.value.data)
-
     if (summaryRes.status === 'fulfilled') {
       summary.value = summaryRes.value.data
     }
