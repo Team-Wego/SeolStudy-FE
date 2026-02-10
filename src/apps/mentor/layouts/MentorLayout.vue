@@ -362,5 +362,11 @@ function handleLogout() {
     min-height: 0;
     overflow-y: auto;
   }
+
+  .mentor-noti :deep(.dropdown) {
+    right: 0;
+    left: auto;
+    max-width: calc(100vw - 40px);
+  }
 }
 </style>
