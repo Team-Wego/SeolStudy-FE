@@ -33,7 +33,7 @@
     <div class="section-card">
       <h3 class="section-title">목표 🎯</h3>
       <div class="goal-list">
-        <div v-for="goal in goals" :key="goal.goalId" class="goal-item">
+        <div v-for="goal in sortedGoals" :key="goal.goalId" class="goal-item">
           <SubjectTag
             v-if="subjectTagMap[goal.subject]"
             :subject="subjectTagMap[goal.subject]"
@@ -48,6 +48,20 @@
           >
             <Paperclip :size="14" color="#5bb8f6" />
           </button>
+          <span v-if="goal.creatorId !== currentMentorId" class="creator-badge mentee">멘티</span>
+          <button
+            v-if="goal.creatorId === currentMentorId"
+            class="goal-kebab-btn"
+            @click.stop="toggleMenu(goal.goalId)"
+          >
+            <MoreVertical :size="14" color="#C7C7CC" />
+          </button>
+          <!-- 케밥 메뉴 -->
+          <div v-if="openMenuId === goal.goalId" class="goal-menu-popup">
+            <button class="goal-menu-item" @click="startEdit(goal)">수정</button>
+            <div class="goal-menu-divider" />
+            <button class="goal-menu-item delete" @click="confirmDelete(goal)">삭제</button>
+          </div>
         </div>
         <div v-if="goals.length === 0 && !goalsLoading" class="empty-text">
           등록된 목표가 없습니다
@@ -113,15 +127,91 @@
         @blur="handleSaveMemo"
       />
     </div>
+
+    <!-- 케밥 메뉴 바깥 클릭 감지 -->
+    <div v-if="openMenuId !== null" class="menu-backdrop" @click="openMenuId = null" />
+
+    <!-- 목표 수정 모달 -->
+    <Teleport to="body">
+      <div v-if="showEditModal" class="goal-modal-overlay" @click.self="closeEditModal">
+        <div class="goal-modal">
+          <h3 class="goal-modal-title">목표 수정</h3>
+          <div class="goal-form-subjects">
+            <button
+              v-for="subj in subjectOptions"
+              :key="subj.value"
+              class="subject-btn"
+              :class="{ active: editForm.subject === subj.value }"
+              @click="editForm.subject = subj.value"
+            >
+              {{ subj.label }}
+            </button>
+          </div>
+          <input
+            v-model="editForm.name"
+            type="text"
+            class="goal-input"
+            placeholder="목표를 입력해주세요"
+          />
+          <div class="goal-file-row">
+            <input ref="editFileInputRef" type="file" hidden @change="handleEditFileSelect" />
+            <button class="goal-file-btn" @click="editFileInputRef?.click()">
+              <Paperclip :size="14" /> 학습지 첨부
+            </button>
+          </div>
+          <!-- 기존 학습지 파일 -->
+          <div v-if="editForm.existingFile" class="goal-file-preview">
+            <Paperclip :size="12" color="#5bb8f6" />
+            <span class="goal-file-name">{{ editForm.existingFile.worksheetName }}</span>
+            <button class="goal-file-remove" @click="removeEditExistingFile">
+              <X :size="12" />
+            </button>
+          </div>
+          <!-- 새 파일 -->
+          <div v-if="editForm.newFile" class="goal-file-preview">
+            <Paperclip :size="12" color="#4a6cf7" />
+            <span class="goal-file-name">{{ editForm.newFile.name }}</span>
+            <button class="goal-file-remove" @click="editForm.newFile = null">
+              <X :size="12" />
+            </button>
+          </div>
+          <div class="goal-form-actions">
+            <button class="goal-cancel-btn" @click="closeEditModal">취소</button>
+            <button
+              class="goal-submit-btn"
+              :disabled="!editForm.name.trim() || !editForm.subject || submitting"
+              @click="handleUpdate"
+            >
+              저장
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- 삭제 확인 모달 -->
+    <Teleport to="body">
+      <div v-if="showDeleteModal" class="goal-modal-overlay" @click.self="closeDeleteModal">
+        <div class="goal-modal">
+          <h3 class="goal-modal-title">목표 삭제</h3>
+          <p class="goal-modal-desc">'{{ deleteTarget?.name }}'을(를) 삭제하시겠습니까?</p>
+          <div class="goal-form-actions">
+            <button class="goal-cancel-btn" @click="closeDeleteModal">취소</button>
+            <button class="goal-delete-btn" :disabled="submitting" @click="handleDelete">삭제</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch } from 'vue'
-import { User, Plus, Paperclip, X } from 'lucide-vue-next'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { User, Plus, Paperclip, X, MoreVertical } from 'lucide-vue-next'
 import SubjectTag from '@/components/common/SubjectTag.vue'
-import { getGoals, createGoal } from '@/api/mentoring/goalApi'
+import { getGoals, createGoal, updateGoal, deleteGoal } from '@/api/mentoring/goalApi'
 import { getMemo, saveMemo } from '@/api/mentoring/mentoringApi'
+import { getCookie } from '@/utils/cookie'
 
 const props = defineProps({
   menteeId: { type: [Number, String], required: true },
@@ -145,9 +235,27 @@ const subjectOptions = [
 
 const goals = ref([])
 const goalsLoading = ref(false)
+const currentMentorId = ref(Number(getCookie('memberId')))
 const showGoalForm = ref(false)
 const newGoal = reactive({ name: '', subject: null, file: null })
 const goalFileInputRef = ref(null)
+
+const openMenuId = ref(null)
+const showEditModal = ref(false)
+const showDeleteModal = ref(false)
+const editTarget = ref(null)
+const deleteTarget = ref(null)
+const submitting = ref(false)
+const editFileInputRef = ref(null)
+const editForm = reactive({ name: '', subject: null, existingFile: null, newFile: null, worksheetChanged: false })
+
+const sortedGoals = computed(() => {
+  return [...goals.value].sort((a, b) => {
+    const aIsMentor = a.creatorId === currentMentorId.value ? 0 : 1
+    const bIsMentor = b.creatorId === currentMentorId.value ? 0 : 1
+    return aIsMentor - bIsMentor
+  })
+})
 
 const memoContent = ref('')
 const memoSaved = ref('')
@@ -204,6 +312,85 @@ async function handleSaveMemo() {
     memoSaved.value = memoContent.value
   } catch (e) {
     console.error('메모 저장 실패:', e)
+  }
+}
+
+function toggleMenu(goalId) {
+  openMenuId.value = openMenuId.value === goalId ? null : goalId
+}
+
+function startEdit(goal) {
+  openMenuId.value = null
+  editTarget.value = goal
+  editForm.name = goal.name
+  editForm.subject = goal.subject
+  editForm.existingFile = goal.worksheetFiles?.length ? goal.worksheetFiles[0] : null
+  editForm.newFile = null
+  editForm.worksheetChanged = false
+  showEditModal.value = true
+}
+
+function closeEditModal() {
+  showEditModal.value = false
+  editTarget.value = null
+}
+
+function handleEditFileSelect(e) {
+  const file = e.target.files?.[0]
+  if (file) {
+    editForm.newFile = file
+    editForm.worksheetChanged = true
+  }
+  e.target.value = ''
+}
+
+function removeEditExistingFile() {
+  editForm.existingFile = null
+  editForm.worksheetChanged = true
+}
+
+async function handleUpdate() {
+  if (!editForm.name.trim() || !editForm.subject || submitting.value) return
+  submitting.value = true
+  try {
+    await updateGoal(
+      editTarget.value.goalId,
+      editForm.name.trim(),
+      editForm.subject,
+      editForm.worksheetChanged,
+      editForm.newFile
+    )
+    closeEditModal()
+    await fetchGoals()
+  } catch (e) {
+    console.error('목표 수정 실패:', e)
+  } finally {
+    submitting.value = false
+  }
+}
+
+function confirmDelete(goal) {
+  openMenuId.value = null
+  deleteTarget.value = goal
+  showDeleteModal.value = true
+}
+
+function closeDeleteModal() {
+  showDeleteModal.value = false
+  deleteTarget.value = null
+}
+
+async function handleDelete() {
+  if (submitting.value) return
+  submitting.value = true
+  try {
+    await deleteGoal(deleteTarget.value.goalId)
+    closeDeleteModal()
+    await fetchGoals()
+  } catch (e) {
+    console.error('목표 삭제 실패:', e)
+  } finally {
+    submitting.value = false
   }
 }
 
@@ -352,6 +539,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+  position: relative;
 }
 
 .subject-tag-etc {
@@ -372,6 +560,19 @@ onMounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.creator-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.creator-badge.mentee {
+  background: #e8f5e9;
+  color: #2e7d32;
 }
 
 .worksheet-clip-btn {
@@ -559,5 +760,118 @@ onMounted(() => {
 
 .memo-textarea::placeholder {
   color: #bbb;
+}
+
+/* 케밥 메뉴 */
+.goal-kebab-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  opacity: 0.5;
+  transition: opacity 0.15s;
+}
+
+.goal-kebab-btn:hover {
+  opacity: 1;
+}
+
+.goal-menu-popup {
+  position: absolute;
+  right: 0;
+  top: 28px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  border: 1px solid #e5e5ea;
+  z-index: 20;
+  min-width: 80px;
+  overflow: hidden;
+}
+
+.goal-menu-item {
+  width: 100%;
+  text-align: left;
+  padding: 10px 14px;
+  border: none;
+  background: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+  cursor: pointer;
+}
+
+.goal-menu-item:hover {
+  background: #f5f5f5;
+}
+
+.goal-menu-item.delete {
+  color: #e53935;
+}
+
+.goal-menu-divider {
+  height: 1px;
+  background: #e5e5ea;
+}
+
+.menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+}
+
+/* 모달 */
+.goal-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.goal-modal {
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  width: 320px;
+  max-width: calc(100vw - 40px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.goal-modal-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.goal-modal-desc {
+  font-size: 14px;
+  color: #666;
+  margin: 0;
+}
+
+.goal-delete-btn {
+  padding: 6px 14px;
+  border-radius: 10px;
+  border: none;
+  background: #e53935;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+}
+
+.goal-delete-btn:disabled {
+  background: #ef9a9a;
+  cursor: not-allowed;
 }
 </style>

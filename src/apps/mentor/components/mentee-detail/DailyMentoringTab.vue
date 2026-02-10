@@ -83,7 +83,16 @@
               <X :size="12" />
             </button>
           </div>
-          <!-- 첨부 파일 미리보기 -->
+          <!-- 기존 첨부 이미지 (수정 모드) -->
+          <div v-if="plannerEditing && plannerExistingImages.length > 0" class="existing-edit-images">
+            <div v-for="img in plannerExistingImages" :key="img.imageId" class="existing-edit-image-wrapper">
+              <img :src="img.imageUrl" class="existing-edit-image" />
+              <button class="existing-image-remove" @click="removePlannerExistingImage(img.imageId)">
+                <X :size="12" />
+              </button>
+            </div>
+          </div>
+          <!-- 새 첨부 파일 미리보기 -->
           <div v-if="plannerFiles.length > 0" class="attached-files">
             <div v-for="(file, idx) in plannerFiles" :key="idx" class="attached-file">
               <Paperclip :size="12" color="#999" />
@@ -198,7 +207,16 @@
                   <X :size="12" />
                 </button>
               </div>
-              <!-- 첨부 파일 미리보기 -->
+              <!-- 기존 첨부 이미지 (수정 모드) -->
+              <div v-if="detail.editing && detail.existingImages?.length > 0" class="existing-edit-images">
+                <div v-for="img in detail.existingImages" :key="img.imageId" class="existing-edit-image-wrapper">
+                  <img :src="img.imageUrl" class="existing-edit-image" />
+                  <button class="existing-image-remove" @click="removeTaskExistingImage(detail, img.imageId)">
+                    <X :size="12" />
+                  </button>
+                </div>
+              </div>
+              <!-- 새 첨부 파일 미리보기 -->
               <div v-if="detail.files?.length > 0" class="attached-files">
                 <div v-for="(file, idx) in detail.files" :key="idx" class="attached-file">
                   <Paperclip :size="12" color="#999" />
@@ -281,6 +299,8 @@ const plannerFeedbackSubmitting = ref(false)
 const plannerHighlight = ref('')
 const plannerEditing = ref(false)
 const plannerFiles = ref([])
+const plannerExistingImages = ref([])
+const plannerDeletedImageIds = ref([])
 const plannerFileInputRef = ref(null)
 const plannerTextareaRef = ref(null)
 const taskTextareaRefs = {}
@@ -436,33 +456,50 @@ async function handlePlannerFeedback() {
 function startPlannerEdit() {
   plannerFeedbackText.value = existingPlannerFeedback.value.content
   plannerHighlight.value = existingPlannerFeedback.value.highlight || ''
+  plannerExistingImages.value = [...(existingPlannerFeedback.value.feedbackImages || [])]
+  plannerDeletedImageIds.value = []
+  plannerFiles.value = []
   plannerEditing.value = true
 }
 
 function cancelPlannerEdit() {
   plannerFeedbackText.value = ''
   plannerHighlight.value = ''
+  plannerExistingImages.value = []
+  plannerDeletedImageIds.value = []
+  plannerFiles.value = []
   plannerEditing.value = false
+}
+
+function removePlannerExistingImage(imageId) {
+  plannerExistingImages.value = plannerExistingImages.value.filter(img => img.imageId !== imageId)
+  plannerDeletedImageIds.value.push(imageId)
 }
 
 async function handlePlannerUpdate() {
   if (!plannerFeedbackText.value.trim() || plannerFeedbackSubmitting.value) return
   plannerFeedbackSubmitting.value = true
   try {
+    const hasNewFiles = plannerFiles.value.length > 0
+    const hasDeletedImages = plannerDeletedImageIds.value.length > 0
     const data = {
       content: plannerFeedbackText.value.trim(),
       highlight: plannerHighlight.value || null,
-      imageChanged: false,
+      imageChanged: hasNewFiles || hasDeletedImages,
     }
-    await updateFeedback(existingPlannerFeedback.value.feedbackId, data)
-    existingPlannerFeedback.value = {
-      ...existingPlannerFeedback.value,
-      content: data.content,
-      highlight: data.highlight,
-    }
+    if (hasDeletedImages) data.deletedImageIds = plannerDeletedImageIds.value
+    await updateFeedback(
+      existingPlannerFeedback.value.feedbackId,
+      data,
+      hasNewFiles ? plannerFiles.value : undefined
+    )
     plannerFeedbackText.value = ''
     plannerHighlight.value = ''
+    plannerExistingImages.value = []
+    plannerDeletedImageIds.value = []
+    plannerFiles.value = []
     plannerEditing.value = false
+    await fetchData()
   } catch (e) {
     console.error('플래너 피드백 수정 실패:', e)
   } finally {
@@ -486,33 +523,51 @@ async function handlePlannerDelete() {
 function startTaskEdit(detail) {
   detail.feedbackText = detail.existingFeedback.content
   detail.highlight = detail.existingFeedback.highlight || ''
+  detail.existingImages = [...(detail.existingFeedback.feedbackImages || [])]
+  detail.deletedImageIds = []
+  detail.files = []
   detail.editing = true
 }
 
 function cancelTaskEdit(detail) {
   detail.feedbackText = ''
   detail.highlight = ''
+  detail.existingImages = []
+  detail.deletedImageIds = []
+  detail.files = []
   detail.editing = false
+}
+
+function removeTaskExistingImage(detail, imageId) {
+  detail.existingImages = detail.existingImages.filter(img => img.imageId !== imageId)
+  if (!detail.deletedImageIds) detail.deletedImageIds = []
+  detail.deletedImageIds.push(imageId)
 }
 
 async function handleTaskUpdate(detail) {
   if (!detail.feedbackText?.trim() || detail.submitting) return
   detail.submitting = true
   try {
+    const hasNewFiles = detail.files?.length > 0
+    const hasDeletedImages = detail.deletedImageIds?.length > 0
     const data = {
       content: detail.feedbackText.trim(),
       highlight: detail.highlight || null,
-      imageChanged: false,
+      imageChanged: hasNewFiles || hasDeletedImages,
     }
-    await updateFeedback(detail.existingFeedback.feedbackId, data)
-    detail.existingFeedback = {
-      ...detail.existingFeedback,
-      content: data.content,
-      highlight: data.highlight,
-    }
+    if (hasDeletedImages) data.deletedImageIds = detail.deletedImageIds
+    await updateFeedback(
+      detail.existingFeedback.feedbackId,
+      data,
+      hasNewFiles ? detail.files : undefined
+    )
     detail.feedbackText = ''
     detail.highlight = ''
+    detail.existingImages = []
+    detail.deletedImageIds = []
+    detail.files = []
     detail.editing = false
+    await fetchData()
   } catch (e) {
     console.error('과제 피드백 수정 실패:', e)
   } finally {
@@ -1207,6 +1262,49 @@ onMounted(() => {
 
 .attached-file-remove:hover {
   color: #f44336;
+}
+
+/* 수정 모드 기존 이미지 */
+.existing-edit-images {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.existing-edit-image-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.existing-edit-image {
+  width: 100px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.existing-image-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: #e53935;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.15s;
+}
+
+.existing-image-remove:hover {
+  background: #c62828;
 }
 
 /* 피드백 이미지 */
