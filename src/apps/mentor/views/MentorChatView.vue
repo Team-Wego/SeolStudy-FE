@@ -436,4 +436,87 @@ onUnmounted(() => {
 .status-dot.offline {
   background: #d9d9d9;
 }
+
+/* 모바일 반응형 */
+@media (max-width: 768px) {
+  .room-list-panel {
+    width: 72px;
+    min-width: 72px;
+  }
+
+  .panel-header {
+    padding: 12px 6px;
+    text-align: center;
+  }
+
+  .panel-title {
+    font-size: 12px;
+  }
+
+  .room-item {
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 6px;
+    align-items: center;
+    text-align: center;
+    position: relative;
+  }
+
+  .room-avatar {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    font-size: 13px;
+  }
+
+  .room-info {
+    width: 100%;
+  }
+
+  .room-top {
+    justify-content: center;
+    margin-bottom: 0;
+  }
+
+  .room-name {
+    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
+    max-width: 60px;
+  }
+
+  .room-time {
+    display: none;
+  }
+
+  .room-bottom {
+    justify-content: center;
+    margin-top: 0;
+  }
+
+  .room-last-msg {
+    display: none;
+  }
+
+  .unread-badge {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    font-size: 10px;
+    line-height: 16px;
+  }
+
+  .chat-header {
+    padding: 10px 14px;
+  }
+
+  .chat-name {
+    font-size: 14px;
+  }
+}
 </style>
