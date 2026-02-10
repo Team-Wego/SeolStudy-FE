@@ -132,9 +132,9 @@
 
     <!-- Bottom Button -->
     <div class="bottom-bar">
-      <button class="cert-btn" :class="{ done: task?.images?.length }" @click="handleCertification">
-        <CheckCircle v-if="task?.images?.length" :size="18" color="#fff" />
-        <span>{{ task?.images?.length ? '공부 인증 완료' : '공부 인증하기' }}</span>
+      <button class="cert-btn" :class="{ done: task?.submittedAt }" @click="handleCertification">
+        <CheckCircle v-if="task?.submittedAt" :size="18" color="#fff" />
+        <span>{{ task?.submittedAt ? '공부 인증 완료' : '공부 인증하기' }}</span>
       </button>
     </div>
 
@@ -162,7 +162,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ChevronLeft, FileText, Download, AlertCircle, CheckCircle } from 'lucide-vue-next'
 import SubjectTag from '@/components/common/SubjectTag.vue'
 import { getCookie } from '@/utils/cookie'
-import { getTaskDetail, uploadTaskImages, updateTaskComment } from '@/api/task/taskApi'
+import { getTaskDetail, uploadTaskImages, updateTaskComment, submitTask } from '@/api/task/taskApi'
 import { getFeedbacks, getFeedbackDetail } from '@/api/feedback/feedbackApi'
 import { getGoals } from '@/api/mentoring/goalApi'
 
@@ -203,7 +203,7 @@ function previewImage(url) {
 }
 
 function handleCertification() {
-  if (task.value?.images?.length) {
+  if (task.value?.submittedAt) {
     showToast.value = true
     return
   }
@@ -222,6 +222,11 @@ async function handleFileSelected(e) {
     const { data } = await uploadTaskImages(Number(memberId), task.value.id, files)
     if (!task.value.images) task.value.images = []
     task.value.images.push(...data)
+
+    // 이미지 업로드 후 과제 제출 (submitted_at 세팅)
+    await submitTask(Number(memberId), task.value.id)
+    task.value.submittedAt = new Date().toISOString()
+    showToast.value = true
   } catch (err) {
     console.error('이미지 업로드 실패:', err)
   } finally {
