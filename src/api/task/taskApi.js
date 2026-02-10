@@ -109,3 +109,7 @@ export function uploadTaskImages(menteeId, taskId, files) {
         headers: { "Content-Type": "multipart/form-data" },
     });
 }
+
+export function submitTask(menteeId, taskId) {
+    return api.put(`/mentees/${menteeId}/tasks/${taskId}/submit`);
+}
