@@ -1,6 +1,5 @@
 <template>
   <div class="task-detail-page">
-    <!-- Header -->
     <div class="detail-header">
       <button class="back-btn" @click="router.back()">
         <ChevronLeft :size="20" color="#1A1A1A" />
@@ -8,7 +7,6 @@
       <h1 class="detail-title">{{ task?.title || '' }}</h1>
     </div>
 
-    <!-- Loading -->
     <div v-if="loading" class="loading-state">
       <div class="skeleton skeleton-text" style="width: 120px; height: 14px; margin-bottom: 8px;" />
       <div class="skeleton skeleton-text" style="width: 50px; height: 22px; margin-bottom: 20px;" />
@@ -17,7 +15,6 @@
     </div>
 
     <template v-else-if="task">
-      <!-- Task Meta -->
       <div class="task-meta">
         <span v-if="goalName" class="meta-goal">목표 | {{ goalName }}</span>
       </div>
@@ -26,7 +23,6 @@
         <span v-else class="subject-tag tag-etc">{{ subjectNameMap[task.subject] || task.subject }}</span>
       </div>
 
-      <!-- Worksheet Files -->
       <div v-if="task.worksheetFiles?.length" class="worksheet-section">
         <div v-for="file in task.worksheetFiles" :key="file.id" class="worksheet-item" @click="openFile(file.url)">
           <FileText :size="18" color="#8E8E93" />
@@ -35,21 +31,20 @@
         </div>
       </div>
 
-      <!-- Description Card -->
       <div v-if="task.description" class="description-card">
         <p class="description-text">{{ task.description }}</p>
       </div>
 
-      <!-- Certification Section -->
       <template v-if="!task.images?.length">
         <div class="empty-cert">
-          <AlertCircle :size="28" color="#C2C2C2" />
+          <span class="empty-cert-icon">
+            <AlertCircle :size="28" color="#C2C2C2" />
+          </span>
           <p class="empty-cert-text">학습지 사진을 업로드해</p>
           <p class="empty-cert-text">공부 인증을 완료해주세요!</p>
         </div>
       </template>
       <template v-else>
-        <!-- Uploaded Images -->
         <div class="cert-images">
           <div class="cert-images-scroll">
             <img v-for="img in task.images" :key="img.id" :src="img.url" class="cert-image"
@@ -57,9 +52,7 @@
           </div>
         </div>
 
-        <!-- 채팅형 피드백 영역 -->
         <div v-if="feedback" class="chat-area">
-          <!-- 멘토 피드백 카드 -->
           <div class="chat-card mentor-feedback-card">
             <div class="mentor-row">
               <div class="mentor-avatar">
@@ -76,7 +69,6 @@
             <span class="chat-time right">{{ formatTimeAgo(feedback.createdAt) }}</span>
           </div>
 
-          <!-- 멘티 코멘트 카드 -->
           <div v-if="task.comment" class="chat-card student-card">
             <div class="student-header">
               <div class="student-avatar">
@@ -87,7 +79,6 @@
             <p class="chat-text">{{ task.comment }}</p>
           </div>
 
-          <!-- 멘토 답글 카드 -->
           <div v-if="feedback.commentReply" class="chat-card mentor-reply-card">
             <div class="reply-header">
               <div class="reply-avatar">
@@ -103,7 +94,6 @@
           </div>
         </div>
 
-        <!-- Comment Section -->
         <div class="comment-section-card">
           <h3 class="comment-label">COMMENT</h3>
           <template v-if="task.comment && !commentEditing">
@@ -130,7 +120,6 @@
 
     <div v-else class="empty-state">과제를 찾을 수 없습니다.</div>
 
-    <!-- Bottom Button -->
     <div class="bottom-bar">
       <button class="cert-btn" :class="{ done: task?.images?.length }" @click="handleCertification">
         <CheckCircle v-if="task?.images?.length" :size="18" color="#fff" />
@@ -138,10 +127,8 @@
       </button>
     </div>
 
-    <!-- Hidden file input -->
     <input ref="fileInputRef" type="file" accept="image/*" multiple hidden @change="handleFileSelected" />
 
-    <!-- Toast Modal -->
     <Transition name="toast">
       <div v-if="showToast" class="toast-overlay" @click="showToast = false">
         <div class="toast-card-modal" @click.stop>
@@ -153,13 +140,31 @@
         </div>
       </div>
     </Transition>
+
+    <Teleport to="body">
+      <div v-if="previewModal.show" class="image-preview-overlay" @click.self="closePreview">
+        <button v-if="previewModal.images.length > 1" class="preview-nav preview-prev" @click="prevImage">
+          <ChevronLeft :size="28" />
+        </button>
+        <img :src="previewModal.images[previewModal.index]" class="preview-image" />
+        <button v-if="previewModal.images.length > 1" class="preview-nav preview-next" @click="nextImage">
+          <ChevronRight :size="28" />
+        </button>
+        <button class="preview-close" @click="closePreview">
+          <X :size="24" />
+        </button>
+        <span v-if="previewModal.images.length > 1" class="preview-counter">
+          {{ previewModal.index + 1 }} / {{ previewModal.images.length }}
+        </span>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ChevronLeft, FileText, Download, AlertCircle, CheckCircle } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, X, FileText, Download, AlertCircle, CheckCircle } from 'lucide-vue-next'
 import SubjectTag from '@/components/common/SubjectTag.vue'
 import { getCookie } from '@/utils/cookie'
 import { getTaskDetail, uploadTaskImages, updateTaskComment } from '@/api/task/taskApi'
@@ -178,6 +183,9 @@ const commentEditing = ref(false)
 const fileInputRef = ref(null)
 const uploading = ref(false)
 const showToast = ref(false)
+
+// 이미지 미리보기 모달 상태
+const previewModal = ref({ show: false, images: [], index: 0 })
 
 const subjectTagMap = { ENG: 'english', MATH: 'math', KOR: 'korean' }
 const subjectNameMap = { KOR: '국어', ENG: '영어', MATH: '수학', ETC: '기타' }
@@ -198,8 +206,26 @@ function openFile(url) {
   if (url) window.open(url, '_blank')
 }
 
+// 이미지 미리보기 열기
 function previewImage(url) {
-  if (url) window.open(url, '_blank')
+  if (!task.value?.images) return
+  const images = task.value.images.map(img => img.url)
+  const idx = images.indexOf(url)
+  previewModal.value = {
+    show: true,
+    images,
+    index: idx >= 0 ? idx : 0
+  }
+}
+
+function closePreview() { previewModal.value.show = false }
+function prevImage() {
+  const m = previewModal.value
+  m.index = (m.index - 1 + m.images.length) % m.images.length
+}
+function nextImage() {
+  const m = previewModal.value
+  m.index = (m.index + 1) % m.images.length
 }
 
 function handleCertification() {
@@ -267,21 +293,17 @@ async function loadTask() {
     const memberId = getCookie('memberId')
     if (!memberId) return
 
-    // goalName 조회 (goalId로 매칭)
     if (data.goalId) {
       try {
         const goalsRes = await getGoals(memberId)
-        console.log('[목표 디버그] goalId:', data.goalId, 'goals 응답:', goalsRes.data)
         const goals = Array.isArray(goalsRes.data) ? goalsRes.data : (goalsRes.data?.content || [])
         const matched = goals.find(g => g.goalId === data.goalId || g.id === data.goalId)
-        console.log('[목표 디버그] 매칭된 목표:', matched)
         if (matched) goalName.value = matched.name || matched.goalName || ''
       } catch (e) {
         console.error('목표 로드 실패:', e)
       }
     }
 
-    // 피드백 조회
     try {
       const feedbackRes = await getFeedbacks(memberId, 'TASK')
       const rawData = feedbackRes.data
@@ -474,7 +496,6 @@ onMounted(() => loadTask())
   padding: 20px;
 }
 
-/* 멘토 피드백 카드 */
 .mentor-row {
   display: flex;
   align-items: center;
@@ -552,7 +573,6 @@ onMounted(() => loadTask())
   text-align: right;
 }
 
-/* 멘티 코멘트 카드 */
 .student-card {
   margin-left: 24px;
 }
@@ -581,7 +601,6 @@ onMounted(() => loadTask())
   color: #8E8E93;
 }
 
-/* 멘토 답글 카드 */
 .mentor-reply-card {
   margin-left: 24px;
 }
@@ -611,12 +630,6 @@ onMounted(() => loadTask())
   object-fit: cover;
 }
 
-.reply-avatar span {
-  font-size: 13px;
-  font-weight: 700;
-  color: #8E8E93;
-}
-
 .reply-info {
   display: flex;
   flex-direction: column;
@@ -644,10 +657,6 @@ onMounted(() => loadTask())
   letter-spacing: 0.5px;
 }
 
-.comment-input-wrap {
-  position: relative;
-}
-
 .comment-input {
   width: 100%;
   min-height: 72px;
@@ -660,10 +669,6 @@ onMounted(() => loadTask())
   line-height: 1.5;
   outline: none;
   resize: none;
-}
-
-.comment-input::placeholder {
-  color: #C2C2C2;
 }
 
 .comment-display {
@@ -762,16 +767,9 @@ onMounted(() => loadTask())
   cursor: default;
 }
 
-/* Loading / Empty */
+/* Skeleton */
 .loading-state {
   padding-top: 8px;
-}
-
-.empty-state {
-  text-align: center;
-  padding: 60px 0;
-  color: #A6A6A6;
-  font-size: 14px;
 }
 
 .skeleton {
@@ -790,15 +788,16 @@ onMounted(() => loadTask())
 }
 
 @keyframes skeleton-shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
 }
 
-.skeleton-text {
-  border-radius: 6px;
-}
-
-/* Toast Modal */
+/* Toast */
 .toast-overlay {
   position: fixed;
   inset: 0;
@@ -843,31 +842,81 @@ onMounted(() => loadTask())
   cursor: pointer;
 }
 
-/* Toast Transition */
-.toast-enter-active {
-  transition: opacity 0.2s ease;
+/* 이미지 미리보기 모달 스타일 (Global or Scoped deep) */
+</style>
+
+<style>
+/* 미리보기 모달은 body에 텔레포트되므로 전역 스타일 혹은 :deep 필요 */
+.image-preview-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.9);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.toast-enter-active .toast-card-modal {
-  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease;
+
+.preview-image {
+  max-width: 90vw;
+  max-height: 80vh;
+  object-fit: contain;
+  border-radius: 8px;
 }
-.toast-leave-active {
-  transition: opacity 0.15s ease;
+
+.preview-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: #fff;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.toast-leave-active .toast-card-modal {
-  transition: transform 0.15s ease, opacity 0.15s ease;
+
+.preview-prev {
+  left: 16px;
 }
-.toast-enter-from {
-  opacity: 0;
+
+.preview-next {
+  right: 16px;
 }
-.toast-enter-from .toast-card-modal {
-  transform: scale(0.85);
-  opacity: 0;
+
+.preview-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: #fff;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.toast-leave-to {
-  opacity: 0;
-}
-.toast-leave-to .toast-card-modal {
-  transform: scale(0.9);
-  opacity: 0;
+
+.preview-counter {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 4px 14px;
+  border-radius: 16px;
 }
 </style>
