@@ -308,4 +308,59 @@ function handleLogout() {
   text-align: center;
   border-radius: 10px;
 }
+
+/* 모바일 반응형 */
+@media (max-width: 768px) {
+  .layout-wrap {
+    flex-direction: column;
+    height: auto;
+    min-height: 100dvh;
+  }
+
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid #eee;
+    padding: 16px 20px 12px;
+  }
+
+  .sidebar-logo {
+    font-size: 18px;
+    margin-bottom: 12px;
+  }
+
+  .mentor-profile {
+    margin-bottom: 12px;
+  }
+
+  .sidebar-divider {
+    margin-bottom: 12px;
+  }
+
+  .sidebar-nav {
+    flex: unset;
+    flex-direction: row;
+    gap: 4px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+
+  .nav-item {
+    padding: 8px 14px;
+    font-size: 13px;
+    white-space: nowrap;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .sidebar-bottom {
+    display: none;
+  }
+
+  .main-content {
+    flex: 1;
+    overflow-y: visible;
+  }
+}
 </style>

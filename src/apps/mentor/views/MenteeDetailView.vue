@@ -133,4 +133,25 @@ onMounted(async () => {
   font-size: 14px;
   padding: 80px 0;
 }
+
+/* 모바일 반응형 */
+@media (max-width: 768px) {
+  .mentee-detail-page {
+    padding: 16px;
+  }
+
+  .detail-layout {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .tab-bar {
+    margin-bottom: 16px;
+  }
+
+  .tab-btn {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+}
 </style>

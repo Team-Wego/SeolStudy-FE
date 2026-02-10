@@ -874,4 +874,12 @@ onMounted(() => {
   background: #ef9a9a;
   cursor: not-allowed;
 }
+
+/* 모바일 반응형 */
+@media (max-width: 768px) {
+  .profile-sidebar {
+    width: 100%;
+    flex-shrink: unset;
+  }
+}
 </style>
