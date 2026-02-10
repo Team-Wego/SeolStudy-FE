@@ -1351,6 +1351,135 @@ onMounted(() => {
   font-size: 13px;
 }
 
+/* 모바일 반응형 */
+@media (max-width: 768px) {
+  .daily-mentoring {
+    overflow-x: hidden;
+    max-width: 100%;
+  }
+
+  .date-title {
+    font-size: 16px;
+  }
+
+  .task-and-time {
+    flex-direction: column;
+  }
+
+  .study-time-card {
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .study-time-value {
+    font-size: 22px;
+  }
+
+  .study-time-icon {
+    position: static;
+    opacity: 0.4;
+    margin-left: auto;
+  }
+
+  .task-list-section {
+    padding: 14px;
+    overflow: hidden;
+  }
+
+  .task-row {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 10px 0;
+  }
+
+  .task-info {
+    flex-basis: calc(100% - 60px);
+    min-width: 0;
+  }
+
+  .task-title {
+    font-size: 13px;
+  }
+
+  .task-time {
+    font-size: 12px;
+  }
+
+  .section-card {
+    padding: 16px;
+    overflow: hidden;
+  }
+
+  .section-title {
+    font-size: 15px;
+    margin-bottom: 12px;
+  }
+
+  .task-detail-header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .task-detail-title {
+    font-size: 14px;
+    flex-basis: 100%;
+  }
+
+  .feedback-textarea {
+    min-height: 80px;
+    font-size: 13px;
+    box-sizing: border-box;
+  }
+
+  .feedback-btn-row {
+    flex-wrap: wrap;
+  }
+
+  .highlight-btn,
+  .attach-btn {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .feedback-submit-btn,
+  .task-feedback-btn {
+    flex-basis: 100%;
+    padding: 12px;
+    font-size: 14px;
+  }
+
+  .feedback-cancel-btn {
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+
+  .task-image {
+    width: 100px;
+    height: 80px;
+  }
+
+  .feedback-image {
+    width: 100px;
+    height: 80px;
+  }
+
+  .existing-edit-image {
+    width: 80px;
+    height: 64px;
+  }
+
+  .worksheet-item {
+    padding: 8px 10px;
+  }
+
+  .worksheet-name {
+    font-size: 12px;
+  }
+}
+
 </style>
 
 <style>

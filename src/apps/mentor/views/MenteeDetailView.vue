@@ -138,11 +138,17 @@ onMounted(async () => {
 @media (max-width: 768px) {
   .mentee-detail-page {
     padding: 16px;
+    overflow-x: hidden;
   }
 
   .detail-layout {
     flex-direction: column;
     gap: 16px;
+  }
+
+  .content-area {
+    max-width: 100%;
+    overflow-x: hidden;
   }
 
   .tab-bar {

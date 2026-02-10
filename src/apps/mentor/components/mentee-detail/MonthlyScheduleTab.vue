@@ -1090,4 +1090,113 @@ onMounted(() => { fetchRangeTasks(); fetchFeedbacks() })
   object-fit: contain;
   border-radius: 8px;
 }
+
+/* 모바일 반응형 */
+@media (max-width: 768px) {
+  .calendar-header {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .month-title {
+    font-size: 16px;
+  }
+
+  .add-task-btn {
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+
+  .calendar-card {
+    padding: 12px;
+  }
+
+  .calendar-grid {
+    gap: 4px;
+  }
+
+  .calendar-cell {
+    max-width: 36px;
+  }
+
+  .cell-date {
+    font-size: 12px;
+  }
+
+  .section-card {
+    padding: 16px;
+  }
+
+  .section-title {
+    font-size: 14px;
+    margin-bottom: 12px;
+  }
+
+  .selected-date-info {
+    padding: 14px;
+  }
+
+  .date-task-item {
+    gap: 6px;
+    padding: 8px 8px;
+  }
+
+  .date-task-title {
+    font-size: 13px;
+  }
+
+  .task-detail-panel {
+    padding: 12px;
+  }
+
+  .week-tabs {
+    gap: 6px;
+  }
+
+  .week-tab {
+    padding: 8px 12px;
+  }
+
+  .week-tab-label {
+    font-size: 12px;
+  }
+
+  .week-tab-range {
+    font-size: 10px;
+  }
+
+  .feedback-textarea {
+    min-height: 80px;
+  }
+
+  .feedback-btn-row {
+    flex-wrap: wrap;
+  }
+
+  .highlight-btn,
+  .attach-btn {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .feedback-submit-btn {
+    flex-basis: 100%;
+    padding: 10px;
+  }
+
+  .feedback-cancel-btn {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .feedback-image {
+    width: 80px;
+    height: 64px;
+  }
+
+  .task-detail-image {
+    width: 80px;
+    height: 64px;
+  }
+}
 </style>
