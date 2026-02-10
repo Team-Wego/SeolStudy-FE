@@ -182,6 +182,11 @@ function getNavigationPath(item) {
   const role = getCookie('memberRole')
   const prefix = role === 'MENTOR' ? '/mentor' : '/mentee'
 
+  // 멘토: 멘티 활동 알림은 해당 학생 관리 페이지로 이동
+  if (role === 'MENTOR' && item.type !== 'CHAT' && item.data?.menteeId) {
+    return `/mentor/mentees/${item.data.menteeId}`
+  }
+
   switch (item.type) {
     case 'CHAT':
       if (item.data?.roomId) {
@@ -199,6 +204,9 @@ function getNavigationPath(item) {
       }
       return `${prefix}/feedback`
     case 'PLANNER_COMPLETED':
+      if (role === 'MENTOR') {
+        return '/mentor/mentees'
+      }
       if (item.data?.date) {
         return `${prefix}/home?date=${item.data.date}`
       }
