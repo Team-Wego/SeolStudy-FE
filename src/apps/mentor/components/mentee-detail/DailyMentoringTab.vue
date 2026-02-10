@@ -1334,6 +1334,7 @@ onMounted(() => {
   border-radius: 2px;
   padding: 0px 1px;
   box-decoration-break: clone;
+  font-weight: 700;
 }
 
 /* 공통 */

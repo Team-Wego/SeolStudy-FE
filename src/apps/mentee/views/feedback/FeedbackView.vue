@@ -585,6 +585,7 @@ onMounted(() => loadData())
   border-radius: 2px;
   padding: 0px 1px;
   box-decoration-break: clone; /* 줄바꿈 시에도 스타일 유지 */
+  font-weight: 700;
 }
 
 

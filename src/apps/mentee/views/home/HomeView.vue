@@ -267,7 +267,7 @@
               <button class="period-btn" :class="{ active: timeForm.startPeriod === '오후' }"
                 @click="timeForm.startPeriod = '오후'">오후</button>
             </div>
-            <input v-model="timeForm.startHour" type="number" min="1" max="12" placeholder="시" class="time-input" />
+            <input v-model="timeForm.startHour" type="number" min="0" max="23" placeholder="시" class="time-input" />
             <span class="time-colon">:</span>
             <input v-model="timeForm.startMinute" type="number" min="0" max="59" placeholder="분" class="time-input" />
           </div>
@@ -283,7 +283,7 @@
               <button class="period-btn" :class="{ active: timeForm.endPeriod === '오후' }"
                 @click="timeForm.endPeriod = '오후'">오후</button>
             </div>
-            <input v-model="timeForm.endHour" type="number" min="1" max="12" placeholder="시" class="time-input" />
+            <input v-model="timeForm.endHour" type="number" min="0" max="23" placeholder="시" class="time-input" />
             <span class="time-colon">:</span>
             <input v-model="timeForm.endMinute" type="number" min="0" max="59" placeholder="분" class="time-input" />
           </div>
@@ -476,7 +476,9 @@ const isTimeFormValid = computed(() => {
 })
 
 function to24Hour(period, hour) {
-  const h = parseInt(hour, 10)
+  let h = parseInt(hour, 10)
+  if (h > 12) h = h - 12   // 13→1, 14→2, ..., 23→11
+  if (h === 0) h = 12       // 0 → 12로 취급
   if (period === '오전') return h === 12 ? 0 : h
   return h === 12 ? 12 : h + 12
 }
@@ -500,10 +502,10 @@ async function openTimeModal() {
   timeForm.taskId = null
   timeForm.startPeriod = '오전'
   timeForm.startHour = ''
-  timeForm.startMinute = ''
+  timeForm.startMinute = '00'
   timeForm.endPeriod = '오전'
   timeForm.endHour = ''
-  timeForm.endMinute = ''
+  timeForm.endMinute = '00'
   showTimeModal.value = true
 }
 

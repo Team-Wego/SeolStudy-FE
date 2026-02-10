@@ -879,6 +879,7 @@ onMounted(() => { fetchRangeTasks(); fetchFeedbacks() })
   background-color: #fff59d;
   border-radius: 2px;
   padding: 0 2px;
+  font-weight: 700;
 }
 
 /* 선택 날짜 정보 */
