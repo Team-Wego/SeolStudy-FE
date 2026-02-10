@@ -13,9 +13,10 @@ export function createGoal(menteeId, name, subject, file) {
   })
 }
 
-export function updateGoal(goalId, name, subject) {
+export function updateGoal(goalId, name, subject, worksheetChanged = false, file = null) {
   const formData = new FormData()
-  formData.append('request', new Blob([JSON.stringify({ name, subject, worksheetChanged: false })], { type: 'application/json' }))
+  formData.append('request', new Blob([JSON.stringify({ name, subject, worksheetChanged })], { type: 'application/json' }))
+  if (file) formData.append('file', file)
   return api.put(`/goals/${goalId}`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   })
