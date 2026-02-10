@@ -4,11 +4,8 @@
     <header class="shrink-0 flex items-center justify-between" style="padding: 12px 20px;">
       <span class="font-bold" style="font-size: 16px;">SeolStudy</span>
       <div class="flex items-center gap-3">
-        <button
-          class="border border-[#0CA5FE] text-[#0CA5FE] font-semibold rounded-full"
-          style="padding: 4px 14px; font-size: 12px;"
-          @click="$router.push('/mentee/goals')"
-        >
+        <button class="border border-[#0CA5FE] text-[#0CA5FE] font-semibold rounded-full"
+          style="padding: 4px 14px; font-size: 12px;" @click="$router.push('/mentee/goals')">
           목표
         </button>
         <NotificationDropdown />
@@ -21,34 +18,20 @@
     </main>
 
     <!-- 하단 탭바 -->
-    <nav class="fixed bottom-0 left-0 right-0 bg-white" style="padding: 20px 24px;">
+    <nav class="fixed bottom-0 left-0 right-0 bg-white z-[10]" style="padding: 20px 24px;">
       <div class="flex items-center justify-between max-w-screen-sm mx-auto" style="gap: 37px;">
-        <RouterLink
-          v-for="tab in tabs"
-          :key="tab.name"
-          :to="tab.to"
-          class="flex flex-col items-center gap-[2px] relative"
-        >
+        <RouterLink v-for="tab in tabs" :key="tab.name" :to="tab.to"
+          class="flex flex-col items-center gap-[2px] relative">
           <div class="flex items-center justify-center w-[38px] h-[40px] relative">
-            <component
-              :is="tab.icon"
-              :size="20"
-              :color="isActive(tab.to) ? '#0CA5FE' : '#A6A6A6'"
-              :stroke-width="1.8"
-            />
+            <component :is="tab.icon" :size="20" :color="isActive(tab.to) ? '#0CA5FE' : '#A6A6A6'"
+              :stroke-width="1.8" />
             <!-- 채팅 탭 읽지 않은 메시지 뱃지 -->
-            <span
-              v-if="tab.name === 'chat' && chatStore.unreadCount > 0"
-              class="unread-badge"
-            >
+            <span v-if="tab.name === 'chat' && chatStore.unreadCount > 0" class="unread-badge">
               {{ chatStore.unreadCount > 99 ? '99+' : chatStore.unreadCount }}
             </span>
           </div>
-          <span
-            class="text-[10px] leading-[12px] text-center"
-            :class="tab.name === 'mypage' ? 'w-[44px]' : 'w-[38px]'"
-            :style="{ color: isActive(tab.to) ? '#0CA5FE' : '#A6A6A6' }"
-          >
+          <span class="text-[10px] leading-[12px] text-center" :class="tab.name === 'mypage' ? 'w-[44px]' : 'w-[38px]'"
+            :style="{ color: isActive(tab.to) ? '#0CA5FE' : '#A6A6A6' }">
             {{ tab.label }}
           </span>
         </RouterLink>
