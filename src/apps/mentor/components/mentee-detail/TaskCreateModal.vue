@@ -61,6 +61,9 @@
             {{ goal.name }}
           </option>
         </select>
+        <p v-if="selectedGoalHasWorksheet" class="goal-worksheet-hint">
+          이 목표의 학습지가 과제에 자동으로 첨부됩니다.
+        </p>
       </div>
 
       <div class="form-field">
@@ -99,7 +102,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { X, Paperclip, ChevronLeft, ChevronRight } from 'lucide-vue-next'
-import { createTask } from '@/api/task/taskApi'
+import { createMentorTask } from '@/api/task/taskApi'
 import { getGoals } from '@/api/mentoring/goalApi'
 
 const props = defineProps({
@@ -139,6 +142,12 @@ const submitting = ref(false)
 const fileInputRef = ref(null)
 
 const isValid = computed(() => form.title.trim() && form.subject && form.dates.length > 0)
+
+const selectedGoalHasWorksheet = computed(() => {
+  if (!form.goalId) return false
+  const goal = goals.value.find(g => g.goalId === form.goalId)
+  return goal?.worksheetFiles?.length > 0
+})
 
 /* --- 유틸리티 함수 --- */
 function todayStr() {
@@ -241,8 +250,9 @@ async function handleSubmit() {
   try {
     // 선택된 모든 날짜에 대해 병렬 등록 요청
     const promises = form.dates.map(date => {
-      return createTask(Number(props.menteeId), {
+      return createMentorTask(Number(props.menteeId), {
         title: form.title.trim(),
+        type: 'ASSIGNMENT',
         date: date,
         subject: subjectToEnum[form.subject],
         description: form.description.trim() || null,
@@ -305,6 +315,13 @@ async function handleSubmit() {
 
 .required {
   color: #ff4d4f;
+}
+
+.goal-worksheet-hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #5bb8f6;
+  font-weight: 500;
 }
 
 /* 인라인 달력 스타일 */

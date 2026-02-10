@@ -38,10 +38,52 @@
       <div v-if="selectedDateTasks.length === 0" class="empty-text">
         등록된 과제가 없습니다.
       </div>
-      <div v-for="task in selectedDateTasks" :key="task.id" class="date-task-item">
+      <div v-for="task in selectedDateTasks" :key="task.id" class="date-task-item"
+        :class="{ 'active': taskDetailData?.id === task.id }" @click="openTaskDetail(task.id)">
         <SubjectTag v-if="subjectTagMap[task.subject]" :subject="subjectTagMap[task.subject]" size="sm" />
         <span class="date-task-title">{{ task.title }}</span>
         <StatusBadge :type="task.isChecked ? 'complete' : 'incomplete'" size="sm" />
+        <ChevronRight :size="16" color="#bbb" class="task-chevron" />
+      </div>
+
+      <!-- 과제 상세 -->
+      <div v-if="taskDetailData" class="task-detail-panel">
+        <div class="task-detail-header">
+          <h5 class="task-detail-title">{{ taskDetailData.title }}</h5>
+          <span class="verification-badge" :class="taskDetailData.submittedAt ? 'verified' : 'unverified'">
+            {{ taskDetailData.submittedAt ? '인증 완료' : '미인증' }}
+          </span>
+          <button class="task-detail-close" @click="taskDetailData = null">
+            <X :size="16" />
+          </button>
+        </div>
+
+        <div v-if="taskDetailData.description" class="task-detail-desc">
+          <p>{{ taskDetailData.description }}</p>
+        </div>
+
+        <div v-if="taskDetailData.worksheetFiles?.length" class="task-detail-section">
+          <h6 class="task-detail-label">학습지</h6>
+          <a v-for="file in taskDetailData.worksheetFiles" :key="file.id" :href="file.url" target="_blank"
+            class="worksheet-link">
+            <FileText :size="14" color="#5bb8f6" />
+            <span>{{ file.name }}</span>
+            <Download :size="12" color="#999" />
+          </a>
+        </div>
+
+        <div v-if="taskDetailData.images?.length" class="task-detail-section">
+          <h6 class="task-detail-label">인증 사진</h6>
+          <div class="task-detail-images">
+            <img v-for="(img, idx) in taskDetailData.images" :key="img.id" :src="img.url"
+              class="task-detail-image" @click="openPreview(taskDetailData.images.map(i => i.url), idx)" />
+          </div>
+        </div>
+
+        <div v-if="taskDetailData.comment" class="task-detail-section">
+          <h6 class="task-detail-label">학생 코멘트</h6>
+          <p class="task-detail-comment">{{ taskDetailData.comment }}</p>
+        </div>
       </div>
     </div>
 
@@ -192,11 +234,11 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import { ChevronLeft, ChevronRight, Highlighter, X, Pencil, Trash2, Paperclip } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, Highlighter, X, Pencil, Trash2, Paperclip, FileText, Download } from 'lucide-vue-next'
 import SubjectTag from '@/components/common/SubjectTag.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import TaskCreateModal from './TaskCreateModal.vue'
-import { getWeeklyTasks } from '@/api/task/taskApi'
+import { getWeeklyTasks, getTaskDetail } from '@/api/task/taskApi'
 import { getFeedbacks, createFeedback, updateFeedback, deleteFeedback } from '@/api/feedback/feedbackApi'
 
 const props = defineProps({
@@ -233,6 +275,7 @@ const monthlyFileInputRef = ref(null)
 
 const showTaskModal = ref(false)
 const taskModalDate = ref('')
+const taskDetailData = ref(null)
 const previewModal = ref({ show: false, images: [], index: 0 })
 
 const dayLabels = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
@@ -316,7 +359,7 @@ function formatDate(date) {
 }
 function isSameDate(a, b) { return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate() }
 function hasTaskOn(d) { return taskDateSet.value.has(formatDate(d)) }
-function selectDate(d) { selectedDate.value = new Date(d) }
+function selectDate(d) { selectedDate.value = new Date(d); taskDetailData.value = null }
 function navigateMonth(offset) {
   const d = new Date(currentYear.value, currentMonth.value + offset, 1)
   currentYear.value = d.getFullYear(); currentMonth.value = d.getMonth(); selectedDate.value = null; activeWeekIdx.value = 0
@@ -328,6 +371,14 @@ function renderHighlightedText(content, highlight) {
   const escaped = content.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   if (!highlight) return escaped
   return escaped.split(highlight).join(`<span class="highlight-mark">${highlight}</span>`)
+}
+
+async function openTaskDetail(taskId) {
+  if (taskDetailData.value?.id === taskId) { taskDetailData.value = null; return }
+  try {
+    const { data } = await getTaskDetail(taskId)
+    taskDetailData.value = data
+  } catch (e) { console.error('과제 상세 조회 실패:', e) }
 }
 
 function openPreview(images, index) { previewModal.value = { show: true, images, index } }
@@ -850,12 +901,163 @@ onMounted(() => { fetchRangeTasks(); fetchFeedbacks() })
   gap: 10px;
   padding: 10px 0;
   border-bottom: 1px solid #f3f4f6;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.date-task-item:hover {
+  background: #f8f9fa;
+}
+
+.date-task-item.active {
+  background: #eef8ff;
+}
+
+.task-chevron {
+  flex-shrink: 0;
 }
 
 .date-task-title {
   flex: 1;
   font-size: 14px;
   font-weight: 600;
+}
+
+/* 과제 상세 패널 */
+.task-detail-panel {
+  margin-top: 12px;
+  padding: 16px;
+  background: #f8fafc;
+  border: 1px solid #e8ecf1;
+  border-radius: 12px;
+}
+
+.task-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.task-detail-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0;
+  flex: 1;
+}
+
+.verification-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.verification-badge.verified {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.verification-badge.unverified {
+  background: #f3f4f6;
+  color: #9e9e9e;
+}
+
+.task-detail-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #999;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+}
+
+.task-detail-desc {
+  margin-bottom: 12px;
+}
+
+.task-detail-desc p {
+  font-size: 13px;
+  color: #555;
+  line-height: 1.6;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.task-detail-section {
+  margin-bottom: 12px;
+}
+
+.task-detail-section:last-child {
+  margin-bottom: 0;
+}
+
+.task-detail-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #888;
+  margin: 0 0 6px;
+}
+
+.worksheet-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  background: #fff;
+  border: 1px solid #e8ecf1;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #333;
+  font-size: 13px;
+  margin-bottom: 4px;
+  transition: background 0.15s;
+}
+
+.worksheet-link:hover {
+  background: #eef3f8;
+}
+
+.worksheet-link span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-detail-images {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.task-detail-image {
+  width: 100px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.task-detail-image:hover {
+  opacity: 0.85;
+}
+
+.task-detail-comment {
+  font-size: 13px;
+  color: #555;
+  line-height: 1.6;
+  margin: 0;
+  padding: 10px 12px;
+  background: #fff;
+  border-radius: 8px;
+  white-space: pre-wrap;
 }
 
 .image-preview-overlay {
